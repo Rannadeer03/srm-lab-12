@@ -1,6 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Users, BookOpen, CheckCircle, BarChart2, Plus, Search, Filter, Download } from 'lucide-react';
+import { 
+  Users, 
+  BookOpen, 
+  CheckCircle, 
+  BarChart2, 
+  Plus, 
+  Search, 
+  Filter, 
+  Download,
+  ClipboardList,
+  FileText,
+  Calendar,
+  Settings,
+  GraduationCap,
+  Target,
+  Award,
+  Book,
+  PenTool
+} from 'lucide-react';
 
 const mockTests = [
   {
@@ -81,6 +99,82 @@ export const TeacherDashboard: React.FC = () => {
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [showNotification, setShowNotification] = useState(false);
 
+  const menuItems = [
+    {
+      id: 'tests',
+      title: 'Test Management',
+      icon: <ClipboardList className="h-8 w-8" />,
+      image: '/images/tests.jpg',
+      color: 'bg-blue-500',
+      description: 'Create and manage tests'
+    },
+    {
+      id: 'assignments',
+      title: 'Assignments',
+      icon: <FileText className="h-8 w-8" />,
+      image: '/images/assignments.jpg',
+      color: 'bg-green-500',
+      description: 'Manage student assignments'
+    },
+    {
+      id: 'materials',
+      title: 'Course Materials',
+      icon: <Book className="h-8 w-8" />,
+      image: '/images/materials.jpg',
+      color: 'bg-purple-500',
+      description: 'Upload and manage study materials'
+    },
+    {
+      id: 'schedule',
+      title: 'Class Schedule',
+      icon: <Calendar className="h-8 w-8" />,
+      image: '/images/schedule.jpg',
+      color: 'bg-yellow-500',
+      description: 'Manage class schedules'
+    },
+    {
+      id: 'grades',
+      title: 'Grade Management',
+      icon: <PenTool className="h-8 w-8" />,
+      image: '/images/grades.jpg',
+      color: 'bg-red-500',
+      description: 'Manage student grades'
+    },
+    {
+      id: 'settings',
+      title: 'Settings',
+      icon: <Settings className="h-8 w-8" />,
+      image: '/images/settings.jpg',
+      color: 'bg-gray-500',
+      description: 'Manage account settings'
+    }
+  ];
+
+  const handleMenuClick = (id: string) => {
+    switch (id) {
+      case 'tests':
+        navigate('/create-test');
+        break;
+      case 'assignments':
+        navigate('/assignments');
+        break;
+      case 'materials':
+        navigate('/course-materials');
+        break;
+      case 'schedule':
+        navigate('/schedule');
+        break;
+      case 'grades':
+        navigate('/grades');
+        break;
+      case 'settings':
+        navigate('/settings');
+        break;
+      default:
+        console.log(`Clicked menu item: ${id}`);
+    }
+  };
+
   useEffect(() => {
     if (location.state?.test) {
       if (location.state?.isEditing) {
@@ -118,7 +212,85 @@ export const TeacherDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Top Decorative Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <GraduationCap className="h-12 w-12" />
+              <div>
+                <h1 className="text-3xl font-bold">Teacher Portal</h1>
+                <p className="text-blue-100">Welcome back, Professor Smith! 👋</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="bg-white/10 p-3 rounded-full">
+                <Target className="h-6 w-6" />
+              </div>
+              <div className="bg-white/10 p-3 rounded-full">
+                <Award className="h-6 w-6" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="inline-flex items-center justify-center p-3 rounded-full bg-blue-100 text-blue-600 mb-4">
+              <Users className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Total Students</h3>
+            <p className="text-3xl font-bold text-blue-600 mt-2">156</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="inline-flex items-center justify-center p-3 rounded-full bg-green-100 text-green-600 mb-4">
+              <ClipboardList className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Active Tests</h3>
+            <p className="text-3xl font-bold text-green-600 mt-2">{tests.filter((t) => t.status === 'active').length}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="inline-flex items-center justify-center p-3 rounded-full bg-purple-100 text-purple-600 mb-4">
+              <BarChart2 className="h-6 w-6" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">Average Score</h3>
+            <p className="text-3xl font-bold text-purple-600 mt-2">78%</p>
+          </div>
+        </div>
+
+        {/* Menu Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          {menuItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => handleMenuClick(item.id)}
+              className="group relative overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md transition-shadow duration-200"
+            >
+              {/* Background Image */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center opacity-20 group-hover:opacity-30 transition-opacity duration-200"
+                style={{ backgroundImage: `url(${item.image})` }}
+              />
+              
+              {/* Content */}
+              <div className="relative p-6">
+                <div className={`inline-flex items-center justify-center p-3 rounded-lg ${item.color} text-white mb-4`}>
+                  {item.icon}
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {item.title}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {item.description}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+
         {/* Notification */}
         {showNotification && (
           <div className="fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50 flex items-center shadow-lg">

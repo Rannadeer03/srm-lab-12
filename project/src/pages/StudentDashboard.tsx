@@ -6,12 +6,22 @@ interface LocationState {
   testId: string;
 }
 
-const mockTests = [
+interface Test {
+  id: string;
+  title: string;
+  subject: string;
+  duration: number;
+  questions: number;
+  status: 'new' | 'attempted' | 'completed';
+  progress?: number;
+  score?: number;
+}
+
+const mockTests: Test[] = [
   {
     id: '1',
     title: 'Mid-term Mathematics',
     subject: 'Mathematics',
-    dueDate: '2024-03-25',
     duration: 120,
     questions: 50,
     status: 'new',
@@ -20,7 +30,6 @@ const mockTests = [
     id: '2',
     title: 'Physics Fundamentals',
     subject: 'Physics',
-    dueDate: '2024-03-28',
     duration: 90,
     questions: 40,
     status: 'attempted',
@@ -30,7 +39,6 @@ const mockTests = [
     id: '3',
     title: 'Chemistry Basics',
     subject: 'Chemistry',
-    dueDate: '2024-03-30',
     duration: 60,
     questions: 30,
     status: 'completed',
@@ -49,9 +57,48 @@ export const StudentDashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { testId } = (location.state as LocationState) || { testId: null };
+  const isTestsView = location.search === '?view=tests';
 
   const handleBack = () => {
-    navigate('/student-dashboard');
+    if (isTestsView) {
+      navigate('/student-dashboard');
+    } else {
+      navigate(-1);
+    }
+  };
+
+  const handleStartTest = (test: Test) => {
+    // Create test data in the format expected by TestInterface
+    const testData = {
+      id: test.id,
+      title: test.title,
+      subject: test.subject,
+      duration: test.duration,
+      questions: [
+        {
+          id: 1,
+          text: "What is 2 + 2?",
+          type: "text",
+          options: ["3", "4", "5", "6"],
+          correctAnswer: 1,
+          difficultyLevel: "easy"
+        },
+        {
+          id: 2,
+          text: "What is the capital of France?",
+          type: "text",
+          options: ["London", "Berlin", "Paris", "Madrid"],
+          correctAnswer: 2,
+          difficultyLevel: "easy"
+        }
+      ]
+    };
+
+    navigate('/test-interface', { 
+      state: { 
+        test: testData
+      } 
+    });
   };
 
   return (
@@ -87,48 +134,55 @@ export const StudentDashboard: React.FC = () => {
                 Back to Dashboard
               </button>
               <h1 className="text-2xl font-bold text-gray-900">
-                All Tests
+                {isTestsView ? 'Available Tests' : 'All Tests'}
               </h1>
-            </div>
-            {/* Welcome Section */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-              <h1 className="text-2xl font-bold text-gray-900">
-                Welcome back, John! Ready for your next challenge?
-              </h1>
-              <p className="mt-2 text-gray-600">
-                You have {mockTests.filter(t => t.status === 'new').length} new tests available.
-              </p>
-            </div>
-            
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-              <StatCard
-                icon={<BookOpen className="h-6 w-6 text-indigo-600" />}
-                title="Total Tests"
-                value={performanceData.totalTests.toString()}
-              />
-              <StatCard
-                icon={<CheckCircle className="h-6 w-6 text-green-600" />}
-                title="Completed"
-                value={performanceData.completedTests.toString()}
-              />
-              <StatCard
-                icon={<BarChart2 className="h-6 w-6 text-blue-600" />}
-                title="Average Score"
-                value={`${performanceData.averageScore}%`}
-              />
-              <StatCard
-                icon={<AlertTriangle className="h-6 w-6 text-yellow-600" />}
-                title="Weak Areas"
-                value={performanceData.weakAreas.length.toString()}
-                subtitle="Need improvement"
-              />
             </div>
 
+            {!isTestsView && (
+              <>
+                {/* Welcome Section */}
+                <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    Welcome back, John! Ready for your next challenge?
+                  </h1>
+                  <p className="mt-2 text-gray-600">
+                    You have {mockTests.filter(t => t.status === 'new').length} new tests available.
+                  </p>
+                </div>
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  <StatCard
+                    icon={<BookOpen className="h-6 w-6 text-indigo-600" />}
+                    title="Total Tests"
+                    value={performanceData.totalTests.toString()}
+                  />
+                  <StatCard
+                    icon={<CheckCircle className="h-6 w-6 text-green-600" />}
+                    title="Completed"
+                    value={performanceData.completedTests.toString()}
+                  />
+                  <StatCard
+                    icon={<BarChart2 className="h-6 w-6 text-blue-600" />}
+                    title="Average Score"
+                    value={`${performanceData.averageScore}%`}
+                  />
+                  <StatCard
+                    icon={<AlertTriangle className="h-6 w-6 text-yellow-600" />}
+                    title="Weak Areas"
+                    value={performanceData.weakAreas.length.toString()}
+                    subtitle="Need improvement"
+                  />
+                </div>
+              </>
+            )}
+
             {/* Available Tests */}
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden mb-8">
+            <div className="bg-white rounded-lg shadow-sm">
               <div className="p-6 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Available Tests</h2>
+                <h2 className="text-lg font-medium text-gray-900">
+                  {isTestsView ? 'All Available Tests' : 'Available Tests'}
+                </h2>
               </div>
               <ul className="divide-y divide-gray-200">
                 {mockTests.map((test) => (
@@ -165,6 +219,7 @@ export const StudentDashboard: React.FC = () => {
                       </div>
                       <div className="ml-4">
                         <button
+                          onClick={() => handleStartTest(test)}
                           className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
                             test.status === 'completed'
                               ? 'text-gray-700 bg-gray-100 hover:bg-gray-200'
@@ -181,53 +236,8 @@ export const StudentDashboard: React.FC = () => {
                 ))}
               </ul>
             </div>
-
-            {/* Weak Areas */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Areas for Improvement</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {performanceData.weakAreas.map((area, index) => (
-                  <div
-                    key={index}
-                    className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex items-start space-x-3"
-                  >
-                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900">{area}</h3>
-                      <p className="mt-1 text-sm text-gray-500">Needs more practice</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </>
         )}
-      </div>
-    </div>
-  );
-};
-
-const StatCard: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  value: string;
-  subtitle?: string;
-}> = ({ icon, title, value, subtitle }) => {
-  return (
-    <div className="bg-white overflow-hidden shadow-sm rounded-lg">
-      <div className="p-5">
-        <div className="flex items-center">
-          <div className="flex-shrink-0">{icon}</div>
-          <div className="ml-5 w-0 flex-1">
-            <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">{value}</dd>
-              {subtitle && (
-                <dd className="mt-1 text-sm text-gray-500">{subtitle}</dd>
-              )}
-            </dl>
-          </div>
-        </div>
       </div>
     </div>
   );
@@ -260,4 +270,24 @@ const TestStatusBadge: React.FC<{
     default:
       return null;
   }
+};
+
+const StatCard: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  subtitle?: string;
+}> = ({ icon, title, value, subtitle }) => {
+  return (
+    <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="flex items-center">
+        {icon}
+        <div className="ml-4">
+          <h3 className="text-sm font-medium text-gray-900">{title}</h3>
+          <p className="text-2xl font-semibold text-gray-900">{value}</p>
+          {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+  );
 };

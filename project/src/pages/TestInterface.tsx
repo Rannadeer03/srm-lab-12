@@ -3,14 +3,41 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Question } from '../types';
 
+interface Test {
+  id: string;
+  title: string;
+  subject: string;
+  duration: number;
+  questions: Question[];
+}
+
 const TestInterface: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const test = location.state?.test;
+  const test = location.state?.test as Test;
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>(Array(test?.questions?.length || 0).fill(-1));
   const [showSummary, setShowSummary] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(test?.duration * 60 || 0);
+
+  React.useEffect(() => {
+    if (!test) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 0) {
+          clearInterval(timer);
+          handleSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [test]);
 
   if (!test || !test.questions) {
     return (
@@ -29,7 +56,7 @@ const TestInterface: React.FC = () => {
   }
 
   const handleAnswerChange = (questionIndex: number, optionIndex: number) => {
-    if (submitted) return; // Prevent changes after submission
+    if (submitted) return;
     const newAnswers = [...answers];
     newAnswers[questionIndex] = optionIndex;
     setAnswers(newAnswers);
@@ -45,7 +72,7 @@ const TestInterface: React.FC = () => {
   };
 
   const handleSubmit = () => {
-    if (submitted) return; // Prevent multiple submissions
+    if (submitted) return;
     
     const finalScore = calculateScore();
     setScore(finalScore);
@@ -72,6 +99,12 @@ const TestInterface: React.FC = () => {
     return 'incorrect';
   };
 
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
   const answeredQuestions = answers.filter(answer => answer !== -1).length;
   const progressPercentage = (answeredQuestions / test.questions.length) * 100;
 
@@ -84,7 +117,7 @@ const TestInterface: React.FC = () => {
             <div>
               <h1 className="text-2xl font-bold text-gray-900">{test.title}</h1>
               <p className="mt-2 text-gray-600">
-                Subject: {test.subject} • Duration: {test.duration} minutes
+                Subject: {test.subject} • Time Remaining: {formatTime(timeLeft)}
               </p>
             </div>
             {!submitted ? (
@@ -117,24 +150,16 @@ const TestInterface: React.FC = () => {
               <span>{answeredQuestions} of {test.questions.length} questions answered</span>
               <span>{Math.round(progressPercentage)}% complete</span>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
               <div
-                className="bg-indigo-600 rounded-full h-2 transition-all duration-300"
+                className="h-full bg-indigo-600 transition-all duration-300"
                 style={{ width: `${progressPercentage}%` }}
               />
             </div>
           </div>
-
-          {/* Warning if not all questions are answered */}
-          {!submitted && answers.includes(-1) && (
-            <div className="mt-4 flex items-center space-x-2 text-yellow-700 bg-yellow-50 p-4 rounded-lg">
-              <AlertTriangle className="h-5 w-5" />
-              <span className="text-sm">Please answer all questions before submitting</span>
-            </div>
-          )}
         </div>
 
-        {/* Test Summary (shown after submission) */}
+        {/* Test Summary (when submitted) */}
         {submitted && showSummary && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
             <div className="flex items-center justify-between">
@@ -170,105 +195,83 @@ const TestInterface: React.FC = () => {
         )}
 
         {/* Questions */}
-        <div className="space-y-6">
-          {test.questions.map((question, questionIndex) => (
+        <div className="space-y-8">
+          {test.questions.map((question, index) => (
             <div
-              key={questionIndex}
+              key={index}
               className={`bg-white rounded-lg shadow-sm p-6 ${
                 submitted
-                  ? getQuestionStatus(questionIndex) === 'correct'
-                    ? 'border-l-4 border-green-500'
-                    : 'border-l-4 border-red-500'
+                  ? getQuestionStatus(index) === 'correct'
+                    ? 'ring-2 ring-green-500'
+                    : getQuestionStatus(index) === 'incorrect'
+                    ? 'ring-2 ring-red-500'
+                    : ''
                   : ''
               }`}
             >
-              <div className="flex items-start justify-between">
-                <h2 className="text-lg font-medium text-gray-900">
-                  Question {questionIndex + 1}
-                </h2>
-                {submitted && (
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      getQuestionStatus(questionIndex) === 'correct'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                Question {index + 1}: {question.text}
+              </h3>
+              <div className="space-y-2">
+                {question.options.map((option: string, optionIndex: number) => (
+                  <button
+                    key={optionIndex}
+                    onClick={() => handleAnswerChange(index, optionIndex)}
+                    disabled={submitted}
+                    className={`w-full text-left p-4 rounded-lg border ${
+                      answers[index] === optionIndex
+                        ? 'border-indigo-500 bg-indigo-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    } ${
+                      submitted
+                        ? optionIndex === question.correctAnswer
+                          ? 'bg-green-50 border-green-500'
+                          : answers[index] === optionIndex
+                          ? 'bg-red-50 border-red-500'
+                          : ''
+                        : ''
                     }`}
                   >
-                    {getQuestionStatus(questionIndex) === 'correct' ? 'Correct' : 'Incorrect'}
-                  </span>
-                )}
-              </div>
-              <p className="mt-2 text-gray-700">{question.text}</p>
-              <div className="mt-4 space-y-2">
-                {question.options.map((option, optionIndex) => (
-                  <label
-                    key={optionIndex}
-                    className={`flex items-center p-4 rounded-lg cursor-pointer ${
-                      submitted
-                        ? question.correctAnswer === optionIndex
-                          ? 'bg-green-50 border-green-200'
-                          : answers[questionIndex] === optionIndex
-                          ? 'bg-red-50 border-red-200'
-                          : 'bg-gray-50 border-gray-200'
-                        : 'hover:bg-gray-50 border-gray-200'
-                    } border`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${questionIndex}`}
-                      value={optionIndex}
-                      checked={answers[questionIndex] === optionIndex}
-                      onChange={() => handleAnswerChange(questionIndex, optionIndex)}
-                      disabled={submitted}
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
-                    />
-                    <span className="ml-3 text-gray-700">{option}</span>
-                    {submitted && question.correctAnswer === optionIndex && (
-                      <CheckCircle className="ml-auto h-5 w-5 text-green-500" />
-                    )}
-                    {submitted && answers[questionIndex] === optionIndex && question.correctAnswer !== optionIndex && (
-                      <AlertTriangle className="ml-auto h-5 w-5 text-red-500" />
-                    )}
-                  </label>
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <div
+                          className={`w-4 h-4 rounded-full border ${
+                            answers[index] === optionIndex
+                              ? 'border-indigo-500 bg-indigo-500'
+                              : 'border-gray-300'
+                          }`}
+                        />
+                      </div>
+                      <div className="ml-3">
+                        <p className={`text-sm ${
+                          answers[index] === optionIndex ? 'text-indigo-900' : 'text-gray-900'
+                        }`}>
+                          {option}
+                        </p>
+                      </div>
+                    </div>
+                  </button>
                 ))}
               </div>
               {submitted && (
-                <div className="mt-4 text-sm">
-                  <p className="font-medium text-gray-900">Explanation:</p>
-                  <p className="mt-1 text-gray-700">
-                    The correct answer is option {question.correctAnswer + 1}.
-                    {question.explanation && <span className="ml-2">{question.explanation}</span>}
-                  </p>
+                <div className="mt-4">
+                  {getQuestionStatus(index) === 'correct' ? (
+                    <div className="flex items-center text-green-700">
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      <span>Correct answer!</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center text-red-700">
+                      <AlertTriangle className="h-5 w-5 mr-2" />
+                      <span>
+                        Incorrect. The correct answer was: {question.options[question.correctAnswer]}
+                      </span>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           ))}
-        </div>
-
-        {/* Bottom Submit/Finish Button */}
-        <div className="mt-8 flex justify-end">
-          {!submitted ? (
-            <button
-              onClick={handleSubmit}
-              className={`inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white ${
-                answers.includes(-1)
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-              }`}
-              disabled={answers.includes(-1)}
-            >
-              <CheckCircle className="h-6 w-6 mr-2" />
-              Submit Test
-            </button>
-          ) : (
-            <button
-              onClick={handleFinish}
-              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-6 w-6 mr-2" />
-              Finish Review
-            </button>
-          )}
         </div>
       </div>
     </div>

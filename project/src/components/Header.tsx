@@ -91,11 +91,12 @@ export const Header: React.FC = () => {
         active: location.pathname === '/student-dashboard'
       },
       { 
-        to: '/tests', 
+        to: '/student-tests', 
         icon: <ClipboardList className="h-5 w-5" />, 
         text: 'Tests',
-        active: location.pathname === '/tests'
+        active: location.pathname === '/student-tests' 
       },
+      
       { 
         to: '/results', 
         icon: <BarChart2 className="h-5 w-5" />, 
