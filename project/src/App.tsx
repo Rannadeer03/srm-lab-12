@@ -7,6 +7,8 @@ import SplashScreen from "./components/splashScreen";
 import { Login } from "./pages/Login";
 import { StudentDashboard } from "./pages/StudentDashboard";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
+import { NewStudentDashboard } from './pages/NewStudentDashboard';
+import { StudyMaterials } from './pages/StudyMaterials';
 import { CreateTest } from "./pages/CreateTest";
 import TestInterface from "./pages/TestInterface";
 import Home from "./pages/Home";
@@ -33,8 +35,10 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/create-profile" element={<CreateProfile />} />
-            <Route path="/student-dashboard" element={<StudentDashboard />} />
+            <Route path="/student-dashboard" element={<NewStudentDashboard />} />
+            <Route path="/student-tests" element={<StudentDashboard />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+            <Route path="/study-materials" element={<StudyMaterials />} />
             <Route path="/create-test" element={<CreateTest />} />
             <Route path="/test-interface" element={<TestInterface />} />
           </Routes>
