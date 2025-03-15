@@ -27,8 +27,21 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   
   const isLoginPage = location.pathname === '/login';
-  const isAuthenticated = ['/student-dashboard', '/teacher-dashboard'].includes(location.pathname);
-  const isTeacher = location.pathname === '/teacher-dashboard';
+  const isAuthenticated = [
+    '/student-dashboard', 
+    '/teacher-dashboard',
+    '/student-tests',
+    '/teacher-tests',
+    '/create-test',
+    '/teacher-test-results',
+    '/student-test-results'
+  ].includes(location.pathname);
+  const isTeacher = [
+    '/teacher-dashboard',
+    '/teacher-tests',
+    '/create-test',
+    '/teacher-test-results'
+  ].includes(location.pathname);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -70,16 +83,10 @@ export const Header: React.FC = () => {
           active: location.pathname === '/create-test'
         },
         { 
-          to: '/manage-tests', 
-          icon: <ClipboardList className="h-5 w-5" />, 
-          text: 'Manage Tests',
-          active: location.pathname === '/manage-tests'
-        },
-        { 
-          to: '/results', 
+          to: '/teacher-test-results', 
           icon: <BarChart2 className="h-5 w-5" />, 
           text: 'Results',
-          active: location.pathname === '/results'
+          active: location.pathname === '/teacher-test-results'
         }
       ];
     }
@@ -91,16 +98,16 @@ export const Header: React.FC = () => {
         active: location.pathname === '/student-dashboard'
       },
       { 
-        to: '/tests', 
+        to: '/student-tests', 
         icon: <ClipboardList className="h-5 w-5" />, 
         text: 'Tests',
-        active: location.pathname === '/tests'
+        active: location.pathname === '/student-tests'
       },
       { 
-        to: '/results', 
+        to: '/student-test-results', 
         icon: <BarChart2 className="h-5 w-5" />, 
         text: 'Results',
-        active: location.pathname === '/results'
+        active: location.pathname === '/student-test-results'
       }
     ];
   };
@@ -315,40 +322,29 @@ export const Header: React.FC = () => {
                         ? 'bg-indigo-50 text-indigo-700'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }`}
-                    onClick={() => setIsMenuOpen(false)}
                   >
                     {link.icon}
                     <span>{link.text}</span>
                   </Link>
                 ))}
-                <button
-                  onClick={handleLogout}
-                  className="flex w-full items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-red-700 hover:bg-red-50"
-                >
-                  <LogOut className="h-5 w-5" />
-                  <span>Logout</span>
-                </button>
               </>
             ) : (
               <>
                 <Link
                   to="/about"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 >
                   About
                 </Link>
                 <Link
                   to="/contact"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
-                  onClick={() => setIsMenuOpen(false)}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                 >
                   Contact
                 </Link>
                 <Link
                   to="/login"
                   className="block px-3 py-2 rounded-md text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700"
-                  onClick={() => setIsMenuOpen(false)}
                 >
                   Login
                 </Link>

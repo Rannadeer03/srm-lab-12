@@ -13,6 +13,7 @@ import Home from "./pages/Home";
 import { CreateProfile } from './pages/CreateProfile';
 import StundentTestResults from "./pages/StundentTestResults";
 import TeacherTestResults from "./pages/TeacherTestResults";
+import { NewStudentDashboard } from "./pages/NewStudentDashboard";
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -33,10 +34,13 @@ const App: React.FC = () => {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/create-profile" element={<CreateProfile />} />
-            <Route path="/student-dashboard" element={<StudentDashboard />} />
+            <Route path="/student-dashboard" element={<NewStudentDashboard />} />
+            <Route path="/student-tests" element={<StudentDashboard />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-            <Route path="/create-test" element={<CreateTest />} />
+            <Route path="/create-test" element={<TeacherDashboard />} />
             <Route path="/test-interface" element={<TestInterface />} />
+            <Route path="/teacher-test-results" element={<TeacherTestResults />} />
+            <Route path="/student-test-results" element={<StundentTestResults />} />
           </Routes>
         </main>
         <Footer />
