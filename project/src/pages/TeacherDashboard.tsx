@@ -151,27 +151,14 @@ export const TeacherDashboard: React.FC = () => {
   ];
 
   const handleMenuClick = (id: string) => {
-    switch (id) {
-      case 'tests':
-        navigate('/create-test');
-        break;
-      case 'assignments':
-        navigate('/assignments');
-        break;
-      case 'materials':
-        navigate('/course-materials');
-        break;
-      case 'schedule':
-        navigate('/schedule');
-        break;
-      case 'grades':
-        navigate('/grades');
-        break;
-      case 'settings':
-        navigate('/settings');
-        break;
-      default:
-        console.log(`Clicked menu item: ${id}`);
+    if (id === 'create-test') {
+      navigate('/create-test');
+    } else if (id === 'assignments') {
+      navigate('/teacher/assignments');
+    } else if (id === 'study-materials') {
+      navigate('/study-materials');
+    } else {
+      console.log(`Clicked menu item: ${id}`);
     }
   };
 

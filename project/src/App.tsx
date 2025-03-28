@@ -15,6 +15,9 @@ import Home from "./pages/Home";
 import { CreateProfile } from './pages/CreateProfile';
 import StundentTestResults from "./pages/StundentTestResults";
 import TeacherTestResults from "./pages/TeacherTestResults";
+import TeacherAssignmentUpload from "./components/TeacherAssignmentUpload";
+import StudentAssignmentView from "./components/StudentAssignmentView";
+import SubjectManager from "./components/SubjectManager";
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -29,6 +32,7 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
+        <SubjectManager />
         <Header />
         <main className="flex-grow">
           <Routes>
@@ -37,11 +41,12 @@ const App: React.FC = () => {
             <Route path="/create-profile" element={<CreateProfile />} />
             <Route path="/student-dashboard" element={<NewStudentDashboard />} />
             <Route path="/student-tests" element={<StudentDashboard />} />
-            <Route path="/student-tests" element={<StudentDashboard />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
             <Route path="/study-materials" element={<StudyMaterials />} />
             <Route path="/create-test" element={<CreateTest />} />
             <Route path="/test-interface" element={<TestInterface />} />
+            <Route path="/teacher/assignments" element={<TeacherAssignmentUpload />} />
+            <Route path="/student/assignments" element={<StudentAssignmentView />} />
           </Routes>
         </main>
         <Footer />
