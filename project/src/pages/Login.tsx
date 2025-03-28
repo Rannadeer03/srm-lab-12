@@ -12,12 +12,7 @@ export const Login: React.FC = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // Redirect to the appropriate dashboard
-    if (role === 'student') {
-      navigate('/student-dashboard');
-    } else {
-      navigate('/teacher-dashboard');
-    }
+    navigate(role === 'student' ? '/student-dashboard' : '/teacher-dashboard');
   };
 
   return (

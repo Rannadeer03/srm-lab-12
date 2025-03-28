@@ -27,21 +27,8 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   
   const isLoginPage = location.pathname === '/login';
-  const isAuthenticated = [
-    '/student-dashboard', 
-    '/teacher-dashboard',
-    '/student-tests',
-    '/teacher-tests',
-    '/create-test',
-    '/teacher-test-results',
-    '/student-test-results'
-  ].includes(location.pathname);
-  const isTeacher = [
-    '/teacher-dashboard',
-    '/teacher-tests',
-    '/create-test',
-    '/teacher-test-results'
-  ].includes(location.pathname);
+  const isAuthenticated = ['/student-dashboard', '/teacher-dashboard'].includes(location.pathname);
+  const isTeacher = location.pathname === '/teacher-dashboard';
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -83,10 +70,16 @@ export const Header: React.FC = () => {
           active: location.pathname === '/create-test'
         },
         { 
-          to: '/teacher-test-results', 
+          to: '/manage-tests', 
+          icon: <ClipboardList className="h-5 w-5" />, 
+          text: 'Manage Tests',
+          active: location.pathname === '/manage-tests'
+        },
+        { 
+          to: '/results', 
           icon: <BarChart2 className="h-5 w-5" />, 
           text: 'Results',
-          active: location.pathname === '/teacher-test-results'
+          active: location.pathname === '/results'
         }
       ];
     }
@@ -101,13 +94,14 @@ export const Header: React.FC = () => {
         to: '/student-tests', 
         icon: <ClipboardList className="h-5 w-5" />, 
         text: 'Tests',
-        active: location.pathname === '/student-tests'
+        active: location.pathname === '/student-tests' 
       },
+      
       { 
-        to: '/student-test-results', 
+        to: '/results', 
         icon: <BarChart2 className="h-5 w-5" />, 
         text: 'Results',
-        active: location.pathname === '/student-test-results'
+        active: location.pathname === '/results'
       }
     ];
   };
@@ -322,29 +316,40 @@ export const Header: React.FC = () => {
                         ? 'bg-indigo-50 text-indigo-700'
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                     }`}
+                    onClick={() => setIsMenuOpen(false)}
                   >
                     {link.icon}
                     <span>{link.text}</span>
                   </Link>
                 ))}
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-red-700 hover:bg-red-50"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Logout</span>
+                </button>
               </>
             ) : (
               <>
                 <Link
                   to="/about"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   About
                 </Link>
                 <Link
                   to="/contact"
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Contact
                 </Link>
                 <Link
                   to="/login"
                   className="block px-3 py-2 rounded-md text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+                  onClick={() => setIsMenuOpen(false)}
                 >
                   Login
                 </Link>

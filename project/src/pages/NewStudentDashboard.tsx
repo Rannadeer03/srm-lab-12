@@ -71,8 +71,9 @@ export const NewStudentDashboard: React.FC = () => {
       navigate('/student-tests');
     } else if (id === 'study-materials') {
       navigate('/study-materials');
+    } else if (id === 'assignments') {
+      navigate('/student/assignments');
     } else {
-      // Handle other menu items here
       console.log(`Clicked menu item: ${id}`);
     }
   };

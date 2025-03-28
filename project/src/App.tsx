@@ -7,13 +7,18 @@ import SplashScreen from "./components/splashScreen";
 import { Login } from "./pages/Login";
 import { StudentDashboard } from "./pages/StudentDashboard";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
+import { NewStudentDashboard } from './pages/NewStudentDashboard';
+import { StudyMaterials } from './pages/StudyMaterials';
 import { CreateTest } from "./pages/CreateTest";
 import TestInterface from "./pages/TestInterface";
 import Home from "./pages/Home";
 import { CreateProfile } from './pages/CreateProfile';
 import StundentTestResults from "./pages/StundentTestResults";
 import TeacherTestResults from "./pages/TeacherTestResults";
-import { NewStudentDashboard } from "./pages/NewStudentDashboard";
+import TeacherAssignmentUpload from "./components/TeacherAssignmentUpload";
+import TeacherCourseUpload from "./components/TeacherCourseUpload";
+import StudentAssignmentView from "./components/StudentAssignmentView";
+import SubjectManager from "./components/SubjectManager";
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -28,6 +33,7 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
+        <SubjectManager />
         <Header />
         <main className="flex-grow">
           <Routes>
@@ -37,10 +43,12 @@ const App: React.FC = () => {
             <Route path="/student-dashboard" element={<NewStudentDashboard />} />
             <Route path="/student-tests" element={<StudentDashboard />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-            <Route path="/create-test" element={<TeacherDashboard />} />
+            <Route path="/study-materials" element={<StudyMaterials />} />
+            <Route path="/create-test" element={<CreateTest />} />
             <Route path="/test-interface" element={<TestInterface />} />
-            <Route path="/teacher-test-results" element={<TeacherTestResults />} />
-            <Route path="/student-test-results" element={<StundentTestResults />} />
+            <Route path="/teacher/assignments" element={<TeacherAssignmentUpload />} />
+            <Route path="/teacher/course-materials" element={<TeacherCourseUpload />} />
+            <Route path="/student/assignments" element={<StudentAssignmentView />} />
           </Routes>
         </main>
         <Footer />
