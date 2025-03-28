@@ -43,6 +43,51 @@ export interface StudyMaterial {
   files: string[];
 }
 
+export interface CourseMaterial {
+  _id: string;
+  subject_id: string;
+  title: string;
+  description: string;
+  materialType: string;
+  filename: string;
+  stored_filename: string;
+  path: string;
+  subject_name: string;
+  subject_code: string;
+  upload_date: string;
+  file_type: string;
+}
+
+export interface Test {
+  id: string;
+  title: string;
+  subject: string;
+  duration: number;
+  questions: Question[];
+  participants?: string[];
+  test_schedule?: {
+    is_scheduled: boolean;
+    scheduled_date: string;
+    scheduled_time: string;
+    time_limit: number;
+    allow_late_submissions: boolean;
+    access_window: {
+      start: string;
+      end: string;
+    };
+  };
+  difficulty_distribution?: {
+    easy: number;
+    medium: number;
+    hard: number;
+  };
+  target_ratio?: {
+    easy: number;
+    medium: number;
+    hard: number;
+  };
+}
+
 export const authService = {
   async createProfile(data: ProfileData) {
     try {
@@ -96,6 +141,8 @@ export const authService = {
 
 // API Service
 export const api = {
+  baseUrl: API_BASE_URL,
+
   // Subjects
   async addSubject(subject: Omit<Subject, '_id'>) {
     const response = await fetch(`${API_BASE_URL}/teacher/subjects`, {
@@ -103,14 +150,41 @@ export const api = {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(subject),
+      body: JSON.stringify({
+        name: subject.name,
+        code: subject.code
+      }),
     });
+    if (!response.ok) {
+      throw new Error('Failed to add subject');
+    }
     return response.json();
   },
 
   async getSubjects() {
     const response = await fetch(`${API_BASE_URL}/teacher/subjects`);
     return response.json();
+  },
+
+  async deleteSubject(subjectId: string) {
+    const response = await fetch(`${API_BASE_URL}/teacher/subjects/${subjectId}`, {
+      method: 'DELETE',
+    });
+    if (!response.ok) {
+      throw new Error('Failed to delete subject');
+    }
+    return response.json();
+  },
+
+  async deleteAllSubjects() {
+    try {
+      const subjects = await this.getSubjects();
+      const deletePromises = subjects.map((subject: Subject) => this.deleteSubject(subject._id));
+      await Promise.all(deletePromises);
+    } catch (error) {
+      console.error('Error deleting subjects:', error);
+      throw new Error('Failed to delete all subjects');
+    }
   },
 
   // Questions
@@ -160,7 +234,19 @@ export const api = {
     description: string,
     dueDate: string,
     file: File
-  ) {
+  ): Promise<Assignment> {
+    // Validate file type
+    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Only PDF and Word documents are allowed');
+    }
+
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      throw new Error('File size should not exceed 10MB');
+    }
+
     const formData = new FormData();
     formData.append('subject_id', subjectId);
     formData.append('title', title);
@@ -168,11 +254,23 @@ export const api = {
     formData.append('due_date', dueDate);
     formData.append('file', file);
     
-    const response = await fetch(`${API_BASE_URL}/teacher/assignments`, {
-      method: 'POST',
-      body: formData,
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${API_BASE_URL}/teacher/assignments`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to upload assignment' }));
+        throw new Error(errorData.detail || 'Failed to upload assignment');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error instanceof Error ? error : new Error('Failed to upload assignment');
+    }
   },
 
   async getAssignments() {
@@ -236,6 +334,111 @@ export const api = {
 
   async getStudyMaterials() {
     const response = await fetch(`${API_BASE_URL}/student/study-material`);
+    return response.json();
+  },
+
+  async uploadCourseMaterial(
+    subject_id: string,
+    title: string,
+    description: string,
+    materialType: string,
+    file: File
+  ): Promise<CourseMaterial> {
+    // Validate file type
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'video/mp4',
+      'video/webm'
+    ];
+    
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error('Only PDF, Word, PowerPoint, and video files are allowed');
+    }
+
+    // Validate file size (max 100MB)
+    const maxSize = 100 * 1024 * 1024; // 100MB in bytes
+    if (file.size > maxSize) {
+      throw new Error('File size should not exceed 100MB');
+    }
+
+    const formData = new FormData();
+    formData.append('subject_id', subject_id);
+    formData.append('title', title);
+    formData.append('description', description);
+    formData.append('material_type', materialType);
+    formData.append('file', file);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/teacher/course-material`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to upload course material' }));
+        throw new Error(errorData.detail || 'Failed to upload course material');
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Upload error:', error);
+      throw error instanceof Error ? error : new Error('Failed to upload course material');
+    }
+  },
+
+  async getCourseMaterialsBySubject(subject_id: string): Promise<CourseMaterial[]> {
+    const response = await fetch(`${API_BASE_URL}/teacher/course-material/${subject_id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch course materials');
+    }
+    return response.json();
+  },
+
+  async downloadCourseMaterial(materialPath: string): Promise<Blob> {
+    const response = await fetch(`${API_BASE_URL}/materials/${materialPath}`);
+    if (!response.ok) {
+      throw new Error('Failed to download material');
+    }
+    return response.blob();
+  },
+
+  async getStudentCourseMaterials(subject_id: string): Promise<CourseMaterial[]> {
+    const response = await fetch(`${API_BASE_URL}/student/course-material/${subject_id}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch course materials');
+    }
+    return response.json();
+  },
+
+  async createTest(testData: Omit<Test, 'id'>): Promise<Test> {
+    const response = await fetch(`${API_BASE_URL}/teacher/tests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(testData),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to create test');
+    }
+    return response.json();
+  },
+
+  async updateTest(testId: string, testData: Partial<Test>): Promise<Test> {
+    const response = await fetch(`${API_BASE_URL}/teacher/tests/${testId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(testData),
+    });
+    if (!response.ok) {
+      throw new Error('Failed to update test');
+    }
     return response.json();
   },
 };

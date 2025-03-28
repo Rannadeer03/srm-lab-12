@@ -3,6 +3,60 @@ import { api } from '../services/api';
 import type { Subject } from '../services/api';
 import TeacherAssignmentList from './TeacherAssignmentList';
 
+// Mock data for engineering subjects
+const engineeringSubjects: Subject[] = [
+  {
+    _id: '507f1f77bcf86cd799439011',
+    name: 'Engineering Mathematics',
+    code: '001'
+  },
+  {
+    _id: '507f1f77bcf86cd799439012',
+    name: 'Electric Circuits',
+    code: '002'
+  },
+  {
+    _id: '507f1f77bcf86cd799439013',
+    name: 'Electromagnetic Fields',
+    code: '003'
+  },
+  {
+    _id: '507f1f77bcf86cd799439014',
+    name: 'Signals and Systems',
+    code: '004'
+  },
+  {
+    _id: '507f1f77bcf86cd799439015',
+    name: 'Electrical Machines',
+    code: '005'
+  },
+  {
+    _id: '507f1f77bcf86cd799439016',
+    name: 'Power Systems',
+    code: '006'
+  },
+  {
+    _id: '507f1f77bcf86cd799439017',
+    name: 'Control Systems',
+    code: '007'
+  },
+  {
+    _id: '507f1f77bcf86cd799439018',
+    name: 'Electrical and Electronic Measurements',
+    code: '008'
+  },
+  {
+    _id: '507f1f77bcf86cd799439019',
+    name: 'Analog and Digital Electronics',
+    code: '009'
+  },
+  {
+    _id: '507f1f77bcf86cd799439020',
+    name: 'Power Electronics',
+    code: '010'
+  }
+];
+
 const TeacherAssignmentUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -12,29 +66,79 @@ const TeacherAssignmentUpload: React.FC = () => {
   const [dueDate, setDueDate] = useState<string>('');
   const [message, setMessage] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
   const listRef = useRef<{ fetchAssignments: () => Promise<void> }>(null);
 
+  // Initialize subjects
   useEffect(() => {
-    fetchSubjects();
-  }, []);
+    const initializeSubjects = async () => {
+      try {
+        setIsLoading(true);
+        setError('');
 
-  const fetchSubjects = async () => {
-    try {
-      const data = await api.getSubjects();
-      // Remove duplicates based on code
-      const uniqueSubjects = data.filter((subject: Subject, index: number, self: Subject[]) =>
-        index === self.findIndex((s) => s.code === subject.code)
-      );
-      setSubjects(uniqueSubjects);
-    } catch (err) {
-      console.error('Error fetching subjects:', err);
-      setError('Failed to fetch subjects. Please try again.');
-    }
-  };
+        // First, try to get existing subjects
+        let dbSubjects = await api.getSubjects();
+        
+        // If no subjects exist, add them
+        if (!dbSubjects || dbSubjects.length === 0) {
+          // Delete any existing subjects first
+          await api.deleteAllSubjects();
+          
+          // Add each subject one by one
+          for (const subject of engineeringSubjects) {
+            try {
+              await api.addSubject({
+                name: subject.name,
+                code: subject.code
+              });
+            } catch (err) {
+              console.error(`Failed to add subject ${subject.code}:`, err);
+              setError(`Failed to add subject ${subject.code}. Please try again.`);
+            }
+          }
+          
+          // Get the newly added subjects
+          dbSubjects = await api.getSubjects();
+        }
+
+        if (dbSubjects && dbSubjects.length > 0) {
+          setSubjects(dbSubjects);
+          setMessage('Subjects loaded successfully');
+        } else {
+          setError('No subjects available. Please refresh the page.');
+        }
+      } catch (err) {
+        console.error('Error initializing subjects:', err);
+        setError('Failed to load subjects. Please refresh the page.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initializeSubjects();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      
+      // Validate file type
+      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(selectedFile.type)) {
+        setError('Only PDF and Word documents are allowed');
+        e.target.value = '';
+        return;
+      }
+
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+      if (selectedFile.size > maxSize) {
+        setError('File size should not exceed 10MB');
+        e.target.value = '';
+        return;
+      }
+
+      setFile(selectedFile);
       setError('');
     }
   };
@@ -66,14 +170,19 @@ const TeacherAssignmentUpload: React.FC = () => {
     }
 
     try {
-      const result = await api.uploadAssignment(
+      setError('');
+      setMessage('Uploading assignment...');
+      
+      await api.uploadAssignment(
         selectedSubject,
         title,
         description,
         dueDate,
         file
       );
+
       setMessage('Assignment uploaded successfully!');
+      // Reset form
       setFile(null);
       setTitle('');
       setDescription('');
@@ -84,11 +193,12 @@ const TeacherAssignmentUpload: React.FC = () => {
       if (fileInput) fileInput.value = '';
       // Refresh the list
       if (listRef.current) {
-        listRef.current.fetchAssignments();
+        await listRef.current.fetchAssignments();
       }
     } catch (err) {
-      setError('Failed to upload assignment. Please try again.');
       console.error('Upload error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to upload assignment. Please try again.');
+      setMessage('');
     }
   };
 
@@ -105,18 +215,22 @@ const TeacherAssignmentUpload: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Subject
               </label>
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="">Select a subject</option>
-                {subjects.map((subject) => (
-                  <option key={subject._id} value={subject._id}>
-                    {subject.name} ({subject.code})
-                  </option>
-                ))}
-              </select>
+              {isLoading ? (
+                <div className="animate-pulse bg-gray-200 h-10 rounded-md"></div>
+              ) : (
+                <select
+                  value={selectedSubject}
+                  onChange={(e) => setSelectedSubject(e.target.value)}
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option value="">Select a subject</option>
+                  {subjects.map((subject) => (
+                    <option key={subject._id} value={subject._id}>
+                      {subject.name} ({subject.code})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Title Input */}

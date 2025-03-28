@@ -1,303 +1,64 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Download, 
-  Eye, 
-  Search, 
-  Filter,
-  ArrowLeft,
-  ChevronRight,
-  FileText,
-  Clock,
-  User
-} from 'lucide-react';
-
-// Define types for our data structure
-interface PDF {
-  id: string;
-  title: string;
-  uploadedBy: string;
-  uploadDate: string;
-  size: string;
-  pdfUrl: string;
-}
-
-interface Unit {
-  id: string;
-  title: string;
-  pdfs: PDF[];
-}
-
-interface Subject {
-  id: string;
-  title: string;
-  icon: string;
-  units: Unit[];
-}
-
-// Mock data for subjects and their units
-const subjects: Subject[] = [
-  {
-    id: 'mathematics',
-    title: 'Mathematics',
-    icon: '📐',
-    units: [
-      {
-        id: 'unit1',
-        title: 'Unit 1: Calculus',
-        pdfs: [
-          {
-            id: 'pdf1',
-            title: 'Introduction to Calculus',
-            uploadedBy: 'Dr. Smith',
-            uploadDate: '2024-03-20',
-            size: '2.5 MB',
-            pdfUrl: '/pdfs/math-unit1-intro.pdf'
-          },
-          {
-            id: 'pdf2',
-            title: 'Limits and Continuity',
-            uploadedBy: 'Dr. Smith',
-            uploadDate: '2024-03-21',
-            size: '1.8 MB',
-            pdfUrl: '/pdfs/math-unit1-limits.pdf'
-          },
-          {
-            id: 'pdf3',
-            title: 'Derivatives Practice',
-            uploadedBy: 'Dr. Johnson',
-            uploadDate: '2024-03-22',
-            size: '3.2 MB',
-            pdfUrl: '/pdfs/math-unit1-derivatives.pdf'
-          }
-        ]
-      },
-      {
-        id: 'unit2',
-        title: 'Unit 2: Algebra',
-        pdfs: [
-          {
-            id: 'pdf4',
-            title: 'Basic Algebra Concepts',
-            uploadedBy: 'Dr. Smith',
-            uploadDate: '2024-03-23',
-            size: '2.1 MB',
-            pdfUrl: '/pdfs/math-unit2-basic.pdf'
-          }
-        ]
-      },
-      {
-        id: 'unit3',
-        title: 'Unit 3: Geometry',
-        pdfs: []
-      },
-      {
-        id: 'unit4',
-        title: 'Unit 4: Statistics',
-        pdfs: []
-      },
-      {
-        id: 'unit5',
-        title: 'Unit 5: Trigonometry',
-        pdfs: []
-      }
-    ]
-  },
-  {
-    id: 'physics',
-    title: 'Physics',
-    icon: '⚡',
-    units: [
-      {
-        id: 'unit1',
-        title: 'Unit 1: Mechanics',
-        pdfs: [
-          {
-            id: 'pdf5',
-            title: 'Newton\'s Laws',
-            uploadedBy: 'Dr. Brown',
-            uploadDate: '2024-03-24',
-            size: '2.8 MB',
-            pdfUrl: '/pdfs/physics-unit1-newton.pdf'
-          }
-        ]
-      },
-      {
-        id: 'unit2',
-        title: 'Unit 2: Thermodynamics',
-        pdfs: []
-      },
-      {
-        id: 'unit3',
-        title: 'Unit 3: Electromagnetism',
-        pdfs: []
-      },
-      {
-        id: 'unit4',
-        title: 'Unit 4: Optics',
-        pdfs: []
-      },
-      {
-        id: 'unit5',
-        title: 'Unit 5: Modern Physics',
-        pdfs: []
-      }
-    ]
-  },
-  {
-    id: 'chemistry',
-    title: 'Chemistry',
-    icon: '🧪',
-    units: [
-      {
-        id: 'unit1',
-        title: 'Unit 1: Atomic Structure',
-        pdfs: []
-      },
-      {
-        id: 'unit2',
-        title: 'Unit 2: Chemical Bonding',
-        pdfs: []
-      },
-      {
-        id: 'unit3',
-        title: 'Unit 3: Thermodynamics',
-        pdfs: []
-      },
-      {
-        id: 'unit4',
-        title: 'Unit 4: Organic Chemistry',
-        pdfs: []
-      },
-      {
-        id: 'unit5',
-        title: 'Unit 5: Physical Chemistry',
-        pdfs: []
-      }
-    ]
-  },
-  {
-    id: 'biology',
-    title: 'Biology',
-    icon: '🧬',
-    units: [
-      {
-        id: 'unit1',
-        title: 'Unit 1: Cell Biology',
-        pdfs: []
-      },
-      {
-        id: 'unit2',
-        title: 'Unit 2: Genetics',
-        pdfs: []
-      },
-      {
-        id: 'unit3',
-        title: 'Unit 3: Evolution',
-        pdfs: []
-      },
-      {
-        id: 'unit4',
-        title: 'Unit 4: Ecology',
-        pdfs: []
-      },
-      {
-        id: 'unit5',
-        title: 'Unit 5: Human Physiology',
-        pdfs: []
-      }
-    ]
-  },
-  {
-    id: 'computer-science',
-    title: 'Computer Science',
-    icon: '💻',
-    units: [
-      {
-        id: 'unit1',
-        title: 'Unit 1: Programming Basics',
-        pdfs: []
-      },
-      {
-        id: 'unit2',
-        title: 'Unit 2: Data Structures',
-        pdfs: []
-      },
-      {
-        id: 'unit3',
-        title: 'Unit 3: Algorithms',
-        pdfs: []
-      },
-      {
-        id: 'unit4',
-        title: 'Unit 4: Database Systems',
-        pdfs: []
-      },
-      {
-        id: 'unit5',
-        title: 'Unit 5: Operating Systems',
-        pdfs: []
-      }
-    ]
-  },
-  {
-    id: 'english',
-    title: 'English',
-    icon: '📚',
-    units: [
-      {
-        id: 'unit1',
-        title: 'Unit 1: Literature',
-        pdfs: []
-      },
-      {
-        id: 'unit2',
-        title: 'Unit 2: Grammar',
-        pdfs: []
-      },
-      {
-        id: 'unit3',
-        title: 'Unit 3: Writing Skills',
-        pdfs: []
-      },
-      {
-        id: 'unit4',
-        title: 'Unit 4: Communication',
-        pdfs: []
-      },
-      {
-        id: 'unit5',
-        title: 'Unit 5: Advanced Writing',
-        pdfs: []
-      }
-    ]
-  }
-];
+import { FileText, Download, Eye, Search, ChevronRight, ArrowLeft, Clock, BookOpen } from 'lucide-react';
+import { api } from '../services/api';
+import { API_BASE_URL } from '../config';
+import type { Subject, CourseMaterial } from '../services/api';
 
 export const StudyMaterials: React.FC = () => {
   const navigate = useNavigate();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
-  const [selectedUnit, setSelectedUnit] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [materials, setMaterials] = useState<CourseMaterial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>('');
+
+  // Fetch subjects and materials
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        
+        // Fetch subjects
+        const fetchedSubjects = await api.getSubjects();
+        setSubjects(fetchedSubjects);
+
+        // If a subject is selected, fetch its materials
+        if (selectedSubject) {
+          const subjectMaterials = await api.getStudentCourseMaterials(selectedSubject);
+          setMaterials(subjectMaterials);
+        }
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load study materials. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [selectedSubject]);
 
   const handleBack = () => {
-    if (selectedUnit) {
-      setSelectedUnit(null);
-    } else if (selectedSubject) {
+    if (selectedSubject) {
       setSelectedSubject(null);
+      setMaterials([]);
     } else {
       navigate('/student-dashboard');
     }
   };
 
-  const handlePdfAction = (pdfUrl: string, action: 'view' | 'download') => {
+  const handlePdfAction = (material: CourseMaterial, action: 'view' | 'download') => {
+    const fileUrl = `${API_BASE_URL}/materials/${material.path}`;
+    
     if (action === 'view') {
-      window.open(pdfUrl, '_blank');
+      window.open(fileUrl, '_blank');
     } else {
       const link = document.createElement('a');
-      link.href = pdfUrl;
-      link.download = pdfUrl.split('/').pop() || 'document.pdf';
+      link.href = fileUrl;
+      link.download = material.filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -305,11 +66,22 @@ export const StudyMaterials: React.FC = () => {
   };
 
   const filteredSubjects = subjects.filter(subject =>
-    subject.title.toLowerCase().includes(searchQuery.toLowerCase())
+    subject.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const getCurrentSubject = (): Subject | undefined => subjects.find(s => s.id === selectedSubject);
-  const getCurrentUnit = (): Unit | undefined => getCurrentSubject()?.units.find(u => u.id === selectedUnit);
+  const getCurrentSubject = (): Subject | undefined => 
+    subjects.find(s => s._id === selectedSubject);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading study materials...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -325,22 +97,20 @@ export const StudyMaterials: React.FC = () => {
             </button>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">
-                {selectedUnit 
-                  ? getCurrentUnit()?.title
-                  : selectedSubject 
-                    ? getCurrentSubject()?.title 
-                    : 'Study Materials'}
+                {selectedSubject ? getCurrentSubject()?.name : 'Study Materials'}
               </h1>
               <p className="text-gray-600">
-                {selectedUnit 
-                  ? 'View and download study materials'
-                  : selectedSubject 
-                    ? 'Select a unit to view materials'
-                    : 'Choose a subject to view materials'}
+                {selectedSubject ? 'View and download study materials' : 'Choose a subject to view materials'}
               </p>
             </div>
           </div>
         </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            {error}
+          </div>
+        )}
 
         {/* Search */}
         {!selectedSubject && (
@@ -359,17 +129,17 @@ export const StudyMaterials: React.FC = () => {
         )}
 
         {/* Content */}
-        {selectedUnit ? (
-          // PDFs List
+        {selectedSubject ? (
+          // Materials List
           <div className="space-y-4">
-            {getCurrentUnit()?.pdfs.length === 0 ? (
+            {materials.length === 0 ? (
               <div className="bg-white rounded-lg shadow-sm p-6 text-center">
-                <p className="text-gray-500">No study materials available for this unit yet.</p>
+                <p className="text-gray-500">No study materials available for this subject yet.</p>
               </div>
             ) : (
-              getCurrentUnit()?.pdfs.map((pdf) => (
+              materials.map((material) => (
                 <div
-                  key={pdf.id}
+                  key={material._id}
                   className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -378,30 +148,29 @@ export const StudyMaterials: React.FC = () => {
                         <FileText className="h-5 w-5 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold text-gray-900">{pdf.title}</h3>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <div className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
-                            {pdf.uploadedBy}
-                          </div>
+                        <h3 className="text-lg font-semibold text-gray-900">{material.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{material.description}</p>
+                        <div className="flex items-center space-x-4 text-sm text-gray-500 mt-2">
+                          <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs">
+                            {material.materialType}
+                          </span>
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-1" />
-                            {pdf.uploadDate}
+                            {new Date(material.upload_date).toLocaleDateString()}
                           </div>
-                          <span>{pdf.size}</span>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => handlePdfAction(pdf.pdfUrl, 'view')}
+                        onClick={() => handlePdfAction(material, 'view')}
                         className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         View
                       </button>
                       <button
-                        onClick={() => handlePdfAction(pdf.pdfUrl, 'download')}
+                        onClick={() => handlePdfAction(material, 'download')}
                         className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                       >
                         <Download className="h-4 w-4 mr-1" />
@@ -413,45 +182,23 @@ export const StudyMaterials: React.FC = () => {
               ))
             )}
           </div>
-        ) : selectedSubject ? (
-          // Units Grid
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {getCurrentSubject()?.units.map((unit) => (
-              <button
-                key={unit.id}
-                onClick={() => setSelectedUnit(unit.id)}
-                className="bg-white rounded-lg shadow-sm p-6 text-left hover:shadow-md transition-shadow duration-200"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <BookOpen className="h-5 w-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{unit.title}</h3>
-                      <p className="text-sm text-gray-600">{unit.pdfs.length} Materials Available</p>
-                    </div>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-gray-400" />
-                </div>
-              </button>
-            ))}
-          </div>
         ) : (
           // Subjects Grid
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSubjects.map((subject) => (
               <button
-                key={subject.id}
-                onClick={() => setSelectedSubject(subject.id)}
+                key={subject._id}
+                onClick={() => setSelectedSubject(subject._id)}
                 className="bg-white rounded-lg shadow-sm p-6 text-left hover:shadow-md transition-shadow duration-200"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <span className="text-3xl">{subject.icon}</span>
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <BookOpen className="h-6 w-6 text-blue-600" />
+                    </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900">{subject.title}</h3>
-                      <p className="text-sm text-gray-600">{subject.units.length} Units Available</p>
+                      <h3 className="text-xl font-semibold text-gray-900">{subject.name}</h3>
+                      <p className="text-sm text-gray-600">Code: {subject.code}</p>
                     </div>
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-400" />

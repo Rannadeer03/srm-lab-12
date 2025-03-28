@@ -3,16 +3,44 @@ import { api } from '../services/api';
 
 const predefinedSubjects = [
   {
-    name: "Mathematics",
-    code: "MATH101"
+    name: "Engineering Mathematics",
+    code: "EM101"
   },
   {
-    name: "Physics",
-    code: "PHY101"
+    name: "Electric Circuits",
+    code: "EC102"
   },
   {
-    name: "Chemistry",
-    code: "CHEM101"
+    name: "Electromagnetic Fields",
+    code: "EMF103"
+  },
+  {
+    name: "Signals and Systems",
+    code: "SS104"
+  },
+  {
+    name: "Electrical Machines",
+    code: "EM105"
+  },
+  {
+    name: "Power Systems",
+    code: "PS106"
+  },
+  {
+    name: "Control Systems",
+    code: "CS107"
+  },
+  {
+    name: "Electrical and Electronic Measurements",
+    code: "EEM108"
+  },
+  {
+    name: "Analog and Digital Electronics",
+    code: "ADE109"
+  },
+  {
+    name: "Power Electronics",
+    code: "PE110"
   }
 ];
 
@@ -28,18 +56,13 @@ const SubjectManager: React.FC = () => {
 
   const initializeSubjects = async () => {
     try {
-      const existingSubjects = await api.getSubjects();
+      // First, clear all existing subjects
+      await api.deleteAllSubjects();
       
-      // Only add subjects that don't already exist
+      // Then add the new predefined subjects
       for (const subject of predefinedSubjects) {
-        const exists = existingSubjects.some(
-          (existing: any) => existing.code === subject.code
-        );
-        
-        if (!exists) {
-          await api.addSubject(subject);
-          console.log(`Added subject: ${subject.name}`);
-        }
+        await api.addSubject(subject);
+        console.log(`Added subject: ${subject.name}`);
       }
     } catch (error) {
       console.error('Error initializing subjects:', error);
