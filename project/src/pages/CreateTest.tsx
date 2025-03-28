@@ -263,14 +263,16 @@ export const CreateTest: React.FC = () => {
         }
 
         // Transform QuestionFormData to API Question type
-        const transformedQuestions = questions.map(q => ({
+        const transformedQuestions: Question[] = questions.map(q => ({
           teacher_id: teacherId,
           subject_id: selectedSubject._id,
           question_text: q.question_text,
           type: q.type,
           image_url: q.image_url,
           options: q.options,
-          correct_option: q.correct_option.toString()
+          correct_option: q.correct_option.toString(),
+          difficulty_level: q.difficulty_level.toLowerCase(),
+          explanation: q.explanation
         }));
 
         const testData = {

@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 from bson import ObjectId
@@ -63,6 +63,79 @@ DEFAULT_SUBJECTS = [
     {"name": "Analog and Digital Electronics", "code": "009"},
     {"name": "Power Electronics", "code": "010"}
 ]
+
+class Question(BaseModel):
+    teacher_id: int
+    subject_id: str
+    question_text: str
+    options: List[str]
+    correct_option: str
+    type: str
+    image_url: Optional[str] = None
+    difficulty_level: str
+    explanation: Optional[str] = None
+
+@app.post('/teacher/questions')
+def add_question(question: Question):
+    if question.correct_option not in question.options:
+        raise HTTPException(status_code=400, detail="Correct option must be one of the provided options.")
+
+    question_data = question.model_dump()  # convert to json
+
+    db.questions.insert_one(question_data)
+
+    return {"message": "Question added successfully!"}
+
+
+# ObjectId -> string in _id
+def serialize_doc(doc):
+    doc['_id'] = str(doc['_id'])
+    return doc
+
+
+# Teacher: Update a Question
+@app.put('/teacher/questions/{question_id}')
+def update_question(question_id: str, question_text: str = None, options: list = None, correct_option: str = None):
+    update_data = {}
+    if question_text:
+        update_data['question_text'] = question_text
+    if options:
+        update_data['options'] = options
+    if correct_option:
+        update_data['correct_option'] = correct_option
+
+    if not update_data:
+        return {"error": "No data provided for update."}
+
+    result = db.questions.update_one({"_id": ObjectId(question_id)}, {"$set": update_data})
+    if result.matched_count == 0:
+        return {"error": "Question not found."}
+
+    return {"message": "Question updated successfully!"}
+
+
+# Teacher: Delete a Question
+@app.delete('/teacher/questions/{question_id}')
+def delete_question(question_id: str):
+    result = db.questions.delete_one({"_id": ObjectId(question_id)})
+    if result.deleted_count == 0:
+        return {"error": "Question not found."}
+    return {"message": "Question deleted successfully!"}
+
+
+# Student: View All Questions
+@app.get('/student/questions')
+def get_questions():
+    questions = db.questions.find()
+    return [serialize_doc(q) for q in questions]
+
+
+# Student: View Questions by Subject
+@app.get('/student/questions/{subject_id}')
+def get_questions_by_subject(subject_id: str):
+    questions = db.questions.find({"subject_id": subject_id})
+    return [serialize_doc(q) for q in questions]
+
 
 # Assignment model
 class Assignment(BaseModel):
