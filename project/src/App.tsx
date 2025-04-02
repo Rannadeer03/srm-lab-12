@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -33,6 +34,7 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
+        <Toaster position="top-right" />
         <SubjectManager />
         <Header />
         <main className="flex-grow">

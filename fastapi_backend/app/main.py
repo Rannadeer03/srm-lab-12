@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.endpoints import auth, tests
+from .routes import subjects, questions
 
 app = FastAPI(
     title="FastAPI Sawar Backend",
@@ -20,6 +21,8 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
 app.include_router(tests.router, prefix="/tests", tags=["tests"])
+app.include_router(subjects.router)
+app.include_router(questions.router)
 
 @app.get("/")
 def read_root():

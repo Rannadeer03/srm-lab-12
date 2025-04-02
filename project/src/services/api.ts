@@ -12,11 +12,46 @@ interface ProfileData {
 
 // Types
 export interface Question {
-  teacher_id: number;
-  subject_id: string;
+  id?: string;
   question_text: string;
+  type: string;
   options: string[];
-  correct_option: string;
+  correct_option: number;
+  difficulty_level: string;
+  explanation?: string;
+  test_id?: string;
+  test_name?: string;
+  test_duration?: number;
+  test_schedule?: {
+    is_scheduled: boolean;
+    scheduled_date: string;
+    scheduled_time: string;
+    time_limit: number;
+    allow_late_submissions: boolean;
+    access_window: {
+      start: string;
+      end: string;
+    };
+  };
+}
+
+export interface QuestionCreate {
+  test_id: string;
+  question_text: string;
+  type: string;
+  options: string[];
+  correct_option: number;
+  difficulty_level: string;
+  explanation?: string;
+}
+
+export interface QuestionUpdate {
+  question_text: string;
+  type: string;
+  options: string[];
+  correct_option: number;
+  difficulty_level: string;
+  explanation?: string;
 }
 
 export interface Subject {
@@ -59,7 +94,7 @@ export interface CourseMaterial {
 }
 
 export interface Test {
-  id: string;
+  id?: string;
   title: string;
   subject: string;
   duration: number;
@@ -86,6 +121,14 @@ export interface Test {
     medium: number;
     hard: number;
   };
+}
+
+export interface TestResult {
+  test_id: string;
+  student_id: string;
+  answers: { question_id: string; answer: string }[];
+  score: number;
+  submitted_date: string;
 }
 
 export const authService = {
@@ -161,8 +204,11 @@ export const api = {
     return response.json();
   },
 
-  async getSubjects() {
+  async getSubjects(): Promise<Subject[]> {
     const response = await fetch(`${API_BASE_URL}/teacher/subjects`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch subjects');
+    }
     return response.json();
   },
 
@@ -188,42 +234,64 @@ export const api = {
   },
 
   // Questions
-  async addQuestion(question: Question) {
-    const response = await fetch(`${API_BASE_URL}/teacher/questions`, {
+  async createQuestion(question: Question): Promise<Question> {
+    const response = await fetch(`${API_BASE_URL}/questions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(question),
     });
+    if (!response.ok) {
+      throw new Error('Failed to create question');
+    }
     return response.json();
   },
 
-  async updateQuestion(questionId: string, updates: Partial<Question>) {
-    const response = await fetch(`${API_BASE_URL}/teacher/questions/${questionId}`, {
+  async getQuestions(testId: string): Promise<Question[]> {
+    const response = await fetch(`${API_BASE_URL}/questions/test/${testId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch questions');
+    }
+    return response.json();
+  },
+
+  async updateQuestion(questionId: string, question: Partial<Question>): Promise<Question> {
+    const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(updates),
+      body: JSON.stringify(question),
     });
+    if (!response.ok) {
+      throw new Error('Failed to update question');
+    }
     return response.json();
   },
 
-  async deleteQuestion(questionId: string) {
-    const response = await fetch(`${API_BASE_URL}/teacher/questions/${questionId}`, {
+  async deleteQuestion(questionId: string): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/questions/${questionId}`, {
       method: 'DELETE',
     });
-    return response.json();
+    if (!response.ok) {
+      throw new Error('Failed to delete question');
+    }
   },
 
-  async getQuestions() {
+  async getAllQuestions(): Promise<Question[]> {
     const response = await fetch(`${API_BASE_URL}/student/questions`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch questions');
+    }
     return response.json();
   },
 
-  async getQuestionsBySubject(subjectId: string) {
+  async getQuestionsBySubject(subjectId: string): Promise<Question[]> {
     const response = await fetch(`${API_BASE_URL}/student/questions/${subjectId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch questions');
+    }
     return response.json();
   },
 
@@ -414,30 +482,111 @@ export const api = {
     return response.json();
   },
 
+  // Tests
   async createTest(testData: Omit<Test, 'id'>): Promise<Test> {
-    const response = await fetch(`${API_BASE_URL}/teacher/tests`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(testData),
-    });
+    try {
+      console.log('Creating test with data:', testData); // Debug log
+      const response = await fetch(`${API_BASE_URL}/teacher/tests`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Test creation error:', error); // Debug log
+        throw new Error(error.detail || 'Failed to create test');
+      }
+      
+      const result = await response.json();
+      console.log('Test created successfully:', result); // Debug log
+      return result;
+    } catch (error) {
+      console.error('Test creation error:', error);
+      throw error;
+    }
+  },
+
+  async updateTest(testId: string, testData: Partial<Test>): Promise<Test> {
+    try {
+      console.log('Updating test with data:', testData); // Debug log
+      const response = await fetch(`${API_BASE_URL}/teacher/tests/${testId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(testData),
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        console.error('Test update error:', error); // Debug log
+        throw new Error(error.detail || 'Failed to update test');
+      }
+      
+      const result = await response.json();
+      console.log('Test updated successfully:', result); // Debug log
+      return result;
+    } catch (error) {
+      console.error('Test update error:', error);
+      throw error;
+    }
+  },
+
+  async getTests(): Promise<Test[]> {
+    const response = await fetch(`${API_BASE_URL}/teacher/tests`);
     if (!response.ok) {
-      throw new Error('Failed to create test');
+      throw new Error('Failed to fetch tests');
     }
     return response.json();
   },
 
-  async updateTest(testId: string, testData: Partial<Test>): Promise<Test> {
-    const response = await fetch(`${API_BASE_URL}/teacher/tests/${testId}`, {
-      method: 'PUT',
+  async getTest(testId: string): Promise<Test> {
+    const response = await fetch(`${API_BASE_URL}/teacher/tests/${testId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch test');
+    }
+    return response.json();
+  },
+
+  async submitTestResult(testId: string, result: TestResult): Promise<TestResult> {
+    const response = await fetch(`${API_BASE_URL}/student/tests/${testId}/submit`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(testData),
+      body: JSON.stringify(result),
     });
     if (!response.ok) {
-      throw new Error('Failed to update test');
+      const error = await response.json();
+      throw new Error(error.detail || 'Failed to submit test result');
+    }
+    return response.json();
+  },
+
+  // Student Test Views
+  async getStudentTests(): Promise<Test[]> {
+    const response = await fetch(`${API_BASE_URL}/student/tests`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch tests');
+    }
+    return response.json();
+  },
+
+  async getStudentTest(testId: string): Promise<Test> {
+    const response = await fetch(`${API_BASE_URL}/student/tests/${testId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch test');
+    }
+    return response.json();
+  },
+
+  async getStudentTestsBySubject(subjectId: string): Promise<Test[]> {
+    const response = await fetch(`${API_BASE_URL}/student/tests/subject/${subjectId}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch tests');
     }
     return response.json();
   },

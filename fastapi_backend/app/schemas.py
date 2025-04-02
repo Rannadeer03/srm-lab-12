@@ -51,22 +51,25 @@ class Test(TestBase):
         orm_mode = True
 
 class QuestionBase(BaseModel):
-    text: str
+    question_text: str
+    type: str
     options: List[str]
-    correct_answer: int
+    correct_option: int
+    difficulty_level: str
+    explanation: Optional[str] = None
 
 class QuestionCreate(QuestionBase):
-    test_id: int
+    test_id: str
 
-class Question(BaseModel):
-    text: str
-    type: str
-    image_url: Optional[str] = None
-    options: List[str]
-    correct_answer: int
-    difficulty_level: str
-    subject: str
-    explanation: Optional[str] = None
+class QuestionUpdate(QuestionBase):
+    pass
+
+class Question(QuestionBase):
+    id: str
+    test_id: str
+    
+    class Config:
+        from_attributes = True
 
 class TestSchedule(BaseModel):
     is_scheduled: bool = False
@@ -75,13 +78,6 @@ class TestSchedule(BaseModel):
     time_limit: Optional[int] = None
     allow_late_submissions: Optional[bool] = False
     access_window: Optional[Dict[str, str]] = None  # e.g., {"start": "...", "end": "..."}
-
-class Question(QuestionBase):
-    id: int
-    test_id: int
-    
-    class Config:
-        orm_mode = True
 
 class UserAnswerBase(BaseModel):
     question_id: int

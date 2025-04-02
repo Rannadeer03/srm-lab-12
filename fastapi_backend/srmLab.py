@@ -65,33 +65,106 @@ DEFAULT_SUBJECTS = [
 ]
 
 class Question(BaseModel):
-    teacher_id: int
-    subject_id: str
     question_text: str
+    type: str = "multiple_choice"  # Default type
     options: List[str]
-    correct_option: str
-    type: str
-    image_url: Optional[str] = None
+    correct_option: int
     difficulty_level: str
     explanation: Optional[str] = None
+    test_id: Optional[str] = None  # Make test_id optional since it's added after creation
 
-@app.post('/teacher/questions')
+@app.post('/questions')
 def add_question(question: Question):
-    if question.correct_option not in question.options:
-        raise HTTPException(status_code=400, detail="Correct option must be one of the provided options.")
+    try:
+        # Validate question data
+        if not question.question_text.strip():
+            raise HTTPException(status_code=400, detail="Question text is required")
+        if not question.options or len(question.options) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 options are required")
+        if question.correct_option < 0 or question.correct_option >= len(question.options):
+            raise HTTPException(status_code=400, detail="Invalid correct option index")
+        if not question.difficulty_level:
+            raise HTTPException(status_code=400, detail="Difficulty level is required")
 
-    question_data = question.model_dump()  # convert to json
+        # Convert to dict and insert into database
+        question_data = question.model_dump()
+        result = db.questions.insert_one(question_data)
+        question_data['_id'] = str(result.inserted_id)
 
-    db.questions.insert_one(question_data)
+        return question_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    return {"message": "Question added successfully!"}
+@app.get('/questions/{test_id}')
+def get_test_questions(test_id: str):
+    try:
+        questions = list(db.questions.find({"test_id": test_id}))
+        return [serialize_doc(q) for q in questions]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+@app.put('/questions/{question_id}')
+def update_question(question_id: str, question: Question):
+    try:
+        # Validate question data
+        if not question.question_text.strip():
+            raise HTTPException(status_code=400, detail="Question text is required")
+        if not question.options or len(question.options) < 2:
+            raise HTTPException(status_code=400, detail="At least 2 options are required")
+        if question.correct_option < 0 or question.correct_option >= len(question.options):
+            raise HTTPException(status_code=400, detail="Invalid correct option index")
+        if not question.difficulty_level:
+            raise HTTPException(status_code=400, detail="Difficulty level is required")
+
+        # Update question
+        question_data = question.model_dump()
+        result = db.questions.update_one(
+            {"_id": ObjectId(question_id)},
+            {"$set": question_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Question not found")
+        
+        return {"message": "Question updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete('/questions/{question_id}')
+def delete_question(question_id: str):
+    try:
+        result = db.questions.delete_one({"_id": ObjectId(question_id)})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Question not found")
+        return {"message": "Question deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get('/questions')
+def get_all_questions():
+    try:
+        # Get all tests
+        tests = list(db.tests.find())
+        
+        # Get all questions for these tests
+        all_questions = []
+        for test in tests:
+            test_questions = list(db.questions.find({"test_id": str(test["_id"])}))
+            for question in test_questions:
+                # Add test information to each question
+                question["test_name"] = test.get("title", "")
+                question["test_duration"] = test.get("duration", 0)
+                question["test_schedule"] = test.get("test_schedule", {})
+                all_questions.append(question)
+        
+        return [serialize_doc(q) for q in all_questions]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ObjectId -> string in _id
 def serialize_doc(doc):
     doc['_id'] = str(doc['_id'])
     return doc
-
 
 # Teacher: Update a Question
 @app.put('/teacher/questions/{question_id}')
@@ -113,7 +186,6 @@ def update_question(question_id: str, question_text: str = None, options: list =
 
     return {"message": "Question updated successfully!"}
 
-
 # Teacher: Delete a Question
 @app.delete('/teacher/questions/{question_id}')
 def delete_question(question_id: str):
@@ -122,20 +194,49 @@ def delete_question(question_id: str):
         return {"error": "Question not found."}
     return {"message": "Question deleted successfully!"}
 
-
-# Student: View All Questions
-@app.get('/student/questions')
-def get_questions():
-    questions = db.questions.find()
-    return [serialize_doc(q) for q in questions]
-
-
 # Student: View Questions by Subject
 @app.get('/student/questions/{subject_id}')
 def get_questions_by_subject(subject_id: str):
-    questions = db.questions.find({"subject_id": subject_id})
-    return [serialize_doc(q) for q in questions]
+    try:
+        # First get all tests for the subject
+        tests = list(db.tests.find({"subject": subject_id}))
+        
+        # Get all questions for these tests
+        all_questions = []
+        for test in tests:
+            test_questions = list(db.questions.find({"test_id": str(test["_id"])}))
+            for question in test_questions:
+                # Add test information to each question
+                question["test_name"] = test.get("title", "")
+                question["test_duration"] = test.get("duration", 0)
+                question["test_schedule"] = test.get("test_schedule", {})
+                all_questions.append(question)
+        
+        return [serialize_doc(q) for q in all_questions]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
+# Student: Get All Questions
+@app.get('/student/questions')
+def get_all_questions():
+    try:
+        # Get all tests
+        tests = list(db.tests.find())
+        
+        # Get all questions for these tests
+        all_questions = []
+        for test in tests:
+            test_questions = list(db.questions.find({"test_id": str(test["_id"])}))
+            for question in test_questions:
+                # Add test information to each question
+                question["test_name"] = test.get("title", "")
+                question["test_duration"] = test.get("duration", 0)
+                question["test_schedule"] = test.get("test_schedule", {})
+                all_questions.append(question)
+        
+        return [serialize_doc(q) for q in all_questions]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Assignment model
 class Assignment(BaseModel):
@@ -150,6 +251,20 @@ class CourseMaterial(BaseModel):
     title: str = Field(..., description="Title of the course material")
     description: str = Field(..., description="Description of the course material")
     material_type: str = Field(..., description="Type of the course material")
+
+# Get All Subjects (for both teachers and students)
+@app.get('/subjects')
+def get_all_subjects():
+    try:
+        subjects = list(db.subjects.find())
+        if not subjects:
+            # If no subjects exist, add default subjects
+            for subject in DEFAULT_SUBJECTS:
+                db.subjects.insert_one(subject)
+            subjects = list(db.subjects.find())
+        return [serialize_doc(s) for s in subjects]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Teacher: Add a Subject
 @app.post('/teacher/subjects')
@@ -522,7 +637,219 @@ def get_student_course_materials(subject_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ObjectId -> string in _id
-def serialize_doc(doc):
-    doc['_id'] = str(doc['_id'])
-    return doc
+# Test models
+class TestSchedule(BaseModel):
+    is_scheduled: bool = False
+    scheduled_date: Optional[str] = None
+    scheduled_time: Optional[str] = None
+    time_limit: Optional[int] = None
+    allow_late_submissions: bool = False
+    access_window: Optional[dict] = None
+
+class DifficultyDistribution(BaseModel):
+    easy: int = 0
+    medium: int = 0
+    hard: int = 0
+
+class TestCreate(BaseModel):
+    title: str
+    subject: str
+    duration: int
+    questions: List[Question]
+    participants: Optional[List[str]] = []
+    test_schedule: Optional[TestSchedule] = None
+    difficulty_distribution: Optional[DifficultyDistribution] = None
+    target_ratio: Optional[DifficultyDistribution] = None
+
+# Update test endpoints to match frontend expectations
+@app.post('/teacher/tests')
+def create_test(test: TestCreate):
+    try:
+        # Validate test data
+        if not test.title.strip():
+            raise HTTPException(status_code=400, detail="Test title is required")
+        if not test.subject:
+            raise HTTPException(status_code=400, detail="Subject is required")
+        if not test.duration or test.duration <= 0:
+            raise HTTPException(status_code=400, detail="Valid duration is required")
+        if not test.questions:
+            raise HTTPException(status_code=400, detail="At least one question is required")
+
+        # Generate a unique test ID
+        test_id = str(ObjectId())
+        
+        # Process questions
+        processed_questions = []
+        for question in test.questions:
+            # Validate each question
+            if not question.question_text.strip():
+                raise HTTPException(status_code=400, detail="Question text is required")
+            if not question.options or len(question.options) < 2:
+                raise HTTPException(status_code=400, detail="At least 2 options are required")
+            if question.correct_option < 0 or question.correct_option >= len(question.options):
+                raise HTTPException(status_code=400, detail="Invalid correct option index")
+            if not question.difficulty_level:
+                raise HTTPException(status_code=400, detail="Difficulty level is required")
+
+            # Create question document
+            question_data = {
+                "question_text": question.question_text,
+                "type": question.type or "multiple_choice",
+                "options": question.options,
+                "correct_option": question.correct_option,
+                "difficulty_level": question.difficulty_level,
+                "explanation": question.explanation,
+                "test_id": test_id
+            }
+            processed_questions.append(question_data)
+
+        # Create test document
+        test_data = {
+            "_id": test_id,
+            "title": test.title,
+            "subject": test.subject,
+            "duration": test.duration,
+            "questions": processed_questions,
+            "participants": test.participants or [],
+            "test_schedule": test.test_schedule.dict() if test.test_schedule else None,
+            "difficulty_distribution": test.difficulty_distribution.dict() if test.difficulty_distribution else None,
+            "target_ratio": test.target_ratio.dict() if test.target_ratio else None,
+            "created_at": datetime.now().isoformat()
+        }
+
+        # Insert into database
+        result = db.tests.insert_one(test_data)
+        
+        # Return the created test
+        test_data['_id'] = str(result.inserted_id)
+        return test_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating test: {str(e)}")  # Debug log
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create test: {str(e)}"
+        )
+
+@app.get('/teacher/tests')
+def get_teacher_tests():
+    try:
+        tests = list(db.tests.find())
+        return [serialize_doc(t) for t in tests]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get('/teacher/tests/{test_id}')
+def get_teacher_test(test_id: str):
+    try:
+        test = db.tests.find_one({"_id": ObjectId(test_id)})
+        if not test:
+            raise HTTPException(status_code=404, detail="Test not found")
+        return serialize_doc(test)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.put('/teacher/tests/{test_id}')
+def update_test(test_id: str, test: TestCreate):
+    try:
+        # Validate test data
+        if not test.title.strip():
+            raise HTTPException(status_code=400, detail="Test title is required")
+        if not test.subject:
+            raise HTTPException(status_code=400, detail="Subject is required")
+        if not test.duration or test.duration <= 0:
+            raise HTTPException(status_code=400, detail="Valid duration is required")
+        if not test.questions:
+            raise HTTPException(status_code=400, detail="At least one question is required")
+
+        # Update test document
+        test_data = {
+            "title": test.title,
+            "subject": test.subject,
+            "duration": test.duration,
+            "questions": test.questions,
+            "participants": test.participants or [],
+            "test_schedule": test.test_schedule.dict() if test.test_schedule else None,
+            "difficulty_distribution": test.difficulty_distribution.dict() if test.difficulty_distribution else None,
+            "target_ratio": test.target_ratio.dict() if test.target_ratio else None,
+            "updated_at": datetime.now().isoformat()
+        }
+
+        result = db.tests.update_one(
+            {"_id": ObjectId(test_id)},
+            {"$set": test_data}
+        )
+        
+        if result.matched_count == 0:
+            raise HTTPException(status_code=404, detail="Test not found")
+            
+        return {"message": "Test updated successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete('/teacher/tests/{test_id}')
+def delete_test(test_id: str):
+    try:
+        result = db.tests.delete_one({"_id": ObjectId(test_id)})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Test not found")
+        return {"message": "Test deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Student: Get All Tests
+@app.get('/student/tests')
+def get_student_tests():
+    try:
+        tests = list(db.tests.find())
+        # Add subject information to each test
+        for test in tests:
+            subject = db.subjects.find_one({"name": test.get("subject")})
+            if subject:
+                test["subject_code"] = subject.get("code", "")
+                test["subject_name"] = subject.get("name", "")
+        
+        return [serialize_doc(t) for t in tests]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Student: Get Test by ID
+@app.get('/student/tests/{test_id}')
+def get_student_test(test_id: str):
+    try:
+        test = db.tests.find_one({"_id": ObjectId(test_id)})
+        if not test:
+            raise HTTPException(status_code=404, detail="Test not found")
+            
+        # Add subject information
+        subject = db.subjects.find_one({"name": test.get("subject")})
+        if subject:
+            test["subject_code"] = subject.get("code", "")
+            test["subject_name"] = subject.get("name", "")
+            
+        return serialize_doc(test)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Student: Get Tests by Subject
+@app.get('/student/tests/subject/{subject_id}')
+def get_student_tests_by_subject(subject_id: str):
+    try:
+        # Get subject name from subject_id
+        subject = db.subjects.find_one({"_id": ObjectId(subject_id)})
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+            
+        # Get tests for this subject
+        tests = list(db.tests.find({"subject": subject["name"]}))
+        
+        # Add subject information to each test
+        for test in tests:
+            test["subject_code"] = subject.get("code", "")
+            test["subject_name"] = subject.get("name", "")
+        
+        return [serialize_doc(t) for t in tests]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

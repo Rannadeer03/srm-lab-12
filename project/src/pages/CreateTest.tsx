@@ -2,13 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Save, Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Image as ImageIcon, Type, Upload } from 'lucide-react';
 import { api } from '../services/api';
-import type { Subject, Question } from '../services/api';
+import type { Subject, Question, Test } from '../services/api';
+import { toast } from 'react-hot-toast';
 
 // Define proper enum for difficulty levels
 enum DifficultyLevel {
   EASY = 'easy',
   MEDIUM = 'medium',
   HARD = 'hard'
+}
+
+// Define proper enum for question types
+enum QuestionType {
+  TEXT = 'text',
+  IMAGE = 'image'
 }
 
 interface DifficultyDistribution {
@@ -42,7 +49,10 @@ interface TestSchedule {
   scheduledTime: string;
   timeLimit: number;
   allowLateSubmissions: boolean;
-  accessWindow: { start: string; end: string };
+  accessWindow: {
+    start: string;
+    end: string;
+  };
 }
 
 export const CreateTest: React.FC = () => {
@@ -85,7 +95,10 @@ export const CreateTest: React.FC = () => {
       scheduledTime: '',
       timeLimit: 60,
       allowLateSubmissions: false,
-      accessWindow: { start: '', end: '' }
+      accessWindow: {
+        start: '',
+        end: ''
+      }
     });
 
 
@@ -164,30 +177,60 @@ export const CreateTest: React.FC = () => {
       setCurrentQuestion({ ...currentQuestion, options: newOptions });
     };
 
-    const handleOptionImageUpload = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleOptionImageUpload = async (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
+        try {
+          const formData = new FormData();
+          formData.append('image', file);
+
+          const response = await fetch(`${api.baseUrl}/upload-image`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to upload image');
+          }
+
+          const data = await response.json();
           const newOptions = [...currentQuestion.options];
-          newOptions[index] = `[IMG]${reader.result}`; // Prefix to identify image content
+          newOptions[index] = data.imageUrl;
           setCurrentQuestion({ ...currentQuestion, options: newOptions });
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          setError('Failed to upload image. Please try again.');
+        }
       }
     };
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
+        try {
+          // Create FormData for file upload
+          const formData = new FormData();
+          formData.append('image', file);
+
+          // Upload image to server
+          const response = await fetch(`${api.baseUrl}/upload-image`, {
+            method: 'POST',
+            body: formData
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to upload image');
+          }
+
+          const data = await response.json();
           setCurrentQuestion({
             ...currentQuestion,
-            image_url: reader.result as string
+            image_url: data.imageUrl
           });
-        };
-        reader.readAsDataURL(file);
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          setError('Failed to upload image. Please try again.');
+        }
       }
     };
 
@@ -201,7 +244,23 @@ export const CreateTest: React.FC = () => {
         // Add new question
         setQuestions([...questions, currentQuestion]);
       }
-      handleNextQuestion();
+
+      // Prepare for new question
+      const newQuestion: QuestionFormData = {
+        id: questions.length + 1,
+        question_text: '',
+        type: 'text',
+        options: ['', '', '', ''],
+        correct_option: -1,
+        difficulty_level: DifficultyLevel.MEDIUM
+      };
+
+      // Set the new question as current and move to it
+      setCurrentQuestion(newQuestion);
+      setCurrentQuestionIndex(questions.length);
+
+      // Show success message
+      setError('Question saved successfully! Please enter the next question.');
     };
 
     const handleNextQuestion = () => {
@@ -247,8 +306,43 @@ export const CreateTest: React.FC = () => {
 
     const handleSubmitTest = async () => {
       try {
-        setIsSubmitting(true);
-        setError(null);
+        // Validate test data
+        if (!testTitle.trim()) {
+          toast.error('Please enter a test title');
+          return;
+        }
+        if (!subject) {
+          toast.error('Please select a subject');
+          return;
+        }
+        if (!duration || parseInt(duration) <= 0) {
+          toast.error('Please enter a valid duration');
+          return;
+        }
+        if (questions.length === 0) {
+          toast.error('Please add at least one question');
+          return;
+        }
+
+        // Validate all questions
+        for (const question of questions) {
+          if (!question.question_text.trim()) {
+            toast.error('All questions must have text');
+            return;
+          }
+          if (!question.options || question.options.length < 2) {
+            toast.error('All questions must have at least 2 options');
+            return;
+          }
+          if (question.correct_option === undefined || question.correct_option < 0) {
+            toast.error('All questions must have a correct option selected');
+            return;
+          }
+          if (!question.difficulty_level) {
+            toast.error('All questions must have a difficulty level');
+            return;
+          }
+        }
 
         // Find the subject ID from the subjects array
         const selectedSubject = subjects.find(s => s.name === subject);
@@ -256,57 +350,53 @@ export const CreateTest: React.FC = () => {
           throw new Error('Selected subject not found');
         }
 
-        // Get teacher ID from localStorage and convert to number
-        const teacherId = parseInt(localStorage.getItem('teacherId') || '0');
-        if (!teacherId) {
-          throw new Error('Teacher ID not found');
-        }
-
-        // Transform QuestionFormData to API Question type
-        const transformedQuestions: Question[] = questions.map(q => ({
-          teacher_id: teacherId,
-          subject_id: selectedSubject._id,
-          question_text: q.question_text,
-          type: q.type,
-          image_url: q.image_url,
-          options: q.options,
-          correct_option: q.correct_option.toString(),
-          difficulty_level: q.difficulty_level.toLowerCase(),
-          explanation: q.explanation
-        }));
-
-        const testData = {
+        // Prepare test data
+        const testData: Omit<Test, 'id'> = {
           title: testTitle,
-          subject,
+          subject: selectedSubject._id,
           duration: parseInt(duration),
-          questions: transformedQuestions,
-          participants: participants.map(p => p.email),
+          questions: questions.map(q => ({
+            question_text: q.question_text,
+            type: q.type || 'multiple_choice',
+            options: q.options,
+            correct_option: q.correct_option,
+            difficulty_level: q.difficulty_level,
+            explanation: q.explanation
+          })),
+          participants: [],
           test_schedule: {
-            is_scheduled: testSchedule.isScheduled,
-            scheduled_date: testSchedule.scheduledDate,
-            scheduled_time: testSchedule.scheduledTime,
-            time_limit: testSchedule.timeLimit,
-            allow_late_submissions: testSchedule.allowLateSubmissions,
-            access_window: testSchedule.accessWindow
+            is_scheduled: false,
+            scheduled_date: '',
+            scheduled_time: '',
+            time_limit: 0,
+            allow_late_submissions: false,
+            access_window: {
+              start: '',
+              end: ''
+            }
           },
-          difficulty_distribution: difficultyDistribution,
-          target_ratio: targetRatio
+          difficulty_distribution: {
+            easy: questions.filter(q => q.difficulty_level === 'easy').length,
+            medium: questions.filter(q => q.difficulty_level === 'medium').length,
+            hard: questions.filter(q => q.difficulty_level === 'hard').length
+          },
+          target_ratio: {
+            easy: 0.3,
+            medium: 0.5,
+            hard: 0.2
+          }
         };
 
-        // Make API call using the api service
-        if (isEditing) {
-          await api.updateTest(testToEdit.id, testData);
-        } else {
-          await api.createTest(testData);
-        }
+        console.log('Submitting test data:', testData); // Debug log
 
-        // Success - navigate to tests page
-        navigate('/tests');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-        console.error('Submit error:', err);
-      } finally {
-        setIsSubmitting(false);
+        // Submit test
+        await api.createTest(testData);
+        
+        toast.success('Test created successfully!');
+        navigate('/teacher/tests');
+      } catch (error) {
+        console.error('Error creating test:', error);
+        toast.error(error instanceof Error ? error.message : 'Failed to create test');
       }
     };
 
@@ -320,21 +410,26 @@ export const CreateTest: React.FC = () => {
     };
 
     const isTestValid = () => {
-      // Check for at least one valid question
-      const hasValidQuestion = questions.some(q => 
-        q.question_text.trim() !== '' && 
-        q.correct_option !== -1 &&
-        q.options.every(opt => opt.trim() !== '')
-      );
-      
-      return (
+      // Basic validation for required fields
+      const hasRequiredFields = 
         testTitle.trim() !== '' &&
         subject !== '' &&
         duration !== '' &&
-        parseInt(duration) > 0 &&
-        questions.length > 0 &&
-        hasValidQuestion
-      );
+        parseInt(duration) > 0;
+
+      // Check if there's at least one question
+      const hasQuestions = questions.length > 0;
+
+      // Check if the current question is valid
+      const isCurrentQuestionValid = 
+        currentQuestion.question_text.trim() !== '' &&
+        currentQuestion.options.every(opt => opt.trim() !== '') &&
+        currentQuestion.correct_option !== -1;
+
+      // If we're on the last question, it must be valid
+      const isLastQuestionValid = currentQuestionIndex === questions.length ? isCurrentQuestionValid : true;
+
+      return hasRequiredFields && hasQuestions && isLastQuestionValid;
     };
 
 
@@ -431,9 +526,9 @@ export const CreateTest: React.FC = () => {
 
                   <button
                     onClick={handleSubmitTest}
-                    disabled={isSubmitting || !isTestValid()}
+                    disabled={isSubmitting}
                     className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                      isSubmitting || !isTestValid()
+                      isSubmitting
                         ? 'bg-gray-400 cursor-not-allowed'
                         : 'bg-green-600 hover:bg-green-700'
                     }`}
@@ -449,7 +544,7 @@ export const CreateTest: React.FC = () => {
                     ) : (
                       <>
                         <CheckCircle className="h-5 w-5 mr-2" />
-                    {isEditing ? 'Update Test' : 'Submit Student Test'}
+                    {isEditing ? 'Update Test' : 'Submit Test'}
 
                       </>
                     )}
@@ -460,132 +555,98 @@ export const CreateTest: React.FC = () => {
               {/* Test Schedule Section */}
               <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Test Schedule</h2>
-                <div className="space-y-6">
-                  {/* Enable Scheduling Toggle */}
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">Enable Test Scheduling</label>
-                    <button
-                      onClick={() => setTestSchedule(prev => ({
-                        ...prev,
-                        isScheduled: !prev.isScheduled
-                      }))}
-                      className={`relative inline-block w-12 h-6 ${
-                        testSchedule.isScheduled ? 'bg-indigo-600' : 'bg-gray-200'
-                      } rounded-full transition-colors duration-200 ease-in-out`}
-                    >
-                      <span
-                        className={`inline-block w-4 h-4 transform transition-transform duration-200 ease-in-out bg-white rounded-full shadow-md ${
-                          testSchedule.isScheduled ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                        style={{ marginTop: '4px' }}
-                      />
-                    </button>
+                <div className="space-y-4">
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="isScheduled"
+                      checked={testSchedule.isScheduled}
+                      onChange={(e) => setTestSchedule({ ...testSchedule, isScheduled: e.target.checked })}
+                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                    />
+                    <label htmlFor="isScheduled" className="ml-2 block text-sm text-gray-900">
+                      Schedule Test
+                    </label>
                   </div>
 
                   {testSchedule.isScheduled && (
                     <>
-                      {/* Date and Time Selection */}
-                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Test Date</label>
+                          <label className="block text-sm font-medium text-gray-700">Date</label>
                           <input
                             type="date"
                             value={testSchedule.scheduledDate}
-                            onChange={(e) => setTestSchedule({
-                              ...testSchedule,
-                              scheduledDate: e.target.value
-                            })}
+                            onChange={(e) => setTestSchedule({ ...testSchedule, scheduledDate: e.target.value })}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            min={new Date().toISOString().split('T')[0]}
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Start Time</label>
+                          <label className="block text-sm font-medium text-gray-700">Time</label>
                           <input
                             type="time"
                             value={testSchedule.scheduledTime}
-                            onChange={(e) => setTestSchedule({
-                              ...testSchedule,
-                              scheduledTime: e.target.value
-                            })}
+                            onChange={(e) => setTestSchedule({ ...testSchedule, scheduledTime: e.target.value })}
                             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                           />
                         </div>
                       </div>
 
-                      {/* Access Window */}
-                      <div className="space-y-4">
-                        <label className="block text-sm font-medium text-gray-700">Access Window</label>
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                          <div>
-                            <label className="block text-xs text-gray-500">Start Time</label>
-                            <input
-                              type="datetime-local"
-                              value={testSchedule.accessWindow.start}
-                              onChange={(e) => setTestSchedule({
-                                ...testSchedule,
-                                accessWindow: {
-                                  ...testSchedule.accessWindow,
-                                  start: e.target.value
-                                }
-                              })}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500">End Time</label>
-                            <input
-                              type="datetime-local"
-                              value={testSchedule.accessWindow.end}
-                              onChange={(e) => setTestSchedule({
-                                ...testSchedule,
-                                accessWindow: {
-                                  ...testSchedule.accessWindow,
-                                  end: e.target.value
-                                }
-                              })}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Time Limit */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700">Time Limit (minutes)</label>
                         <input
                           type="number"
                           value={testSchedule.timeLimit}
-                          onChange={(e) => setTestSchedule({
-                            ...testSchedule,
-                            timeLimit: parseInt(e.target.value)
-                          })}
-                          min="1"
+                          onChange={(e) => setTestSchedule({ ...testSchedule, timeLimit: parseInt(e.target.value) })}
                           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                         />
                       </div>
 
-                      {/* Late Submissions */}
-                      <div className="flex items-center space-x-3">
+                      <div className="flex items-center">
                         <input
                           type="checkbox"
                           id="allowLateSubmissions"
                           checked={testSchedule.allowLateSubmissions}
-                          onChange={(e) => setTestSchedule({
-                            ...testSchedule,
-                            allowLateSubmissions: e.target.checked
-                          })}
+                          onChange={(e) => setTestSchedule({ ...testSchedule, allowLateSubmissions: e.target.checked })}
                           className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                         />
-                        <label htmlFor="allowLateSubmissions" className="text-sm text-gray-700">
-                          Allow late submissions
+                        <label htmlFor="allowLateSubmissions" className="ml-2 block text-sm text-gray-900">
+                          Allow Late Submissions
                         </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Access Window Start</label>
+                          <input
+                            type="datetime-local"
+                            value={testSchedule.accessWindow.start}
+                            onChange={(e) => setTestSchedule({
+                              ...testSchedule,
+                              accessWindow: { ...testSchedule.accessWindow, start: e.target.value }
+                            })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Access Window End</label>
+                          <input
+                            type="datetime-local"
+                            value={testSchedule.accessWindow.end}
+                            onChange={(e) => setTestSchedule({
+                              ...testSchedule,
+                              accessWindow: { ...testSchedule.accessWindow, end: e.target.value }
+                            })}
+                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                          />
+                        </div>
                       </div>
                     </>
                   )}
                 </div>
               </div>
 
+              {/* Test Schedule Section */}
               <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">Participant Management</h2>
                 <div className="space-y-6">
@@ -756,257 +817,253 @@ export const CreateTest: React.FC = () => {
                 </div>
               </div>
 
-              {/* Question Editor */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex justify-between items-center mb-6">
+              {/* Question Navigation and Counter */}
+              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+                <div className="flex justify-between items-center mb-4">
                   <h2 className="text-lg font-medium text-gray-900">
-                    Question {currentQuestionIndex + 1} of {Math.max(questions.length, 1)}
+                    Questions ({questions.length})
                   </h2>
-                  <div className="flex space-x-2">
+                  <div className="flex items-center space-x-2">
                     <button
-                      onClick={handleDeleteQuestion}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
+                      onClick={handlePreviousQuestion}
+                      disabled={currentQuestionIndex === 0}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
+                      <ChevronLeft className="h-4 w-4 mr-1" />
+                      Previous
                     </button>
                     <button
-                      onClick={handleSaveQuestion}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                      onClick={handleNextQuestion}
+                      disabled={currentQuestionIndex >= questions.length}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
                     >
-                      <Save className="h-4 w-4 mr-1" />
-                      Save & Next
+                      Next
+                      <ChevronRight className="h-4 w-4 ml-1" />
                     </button>
                   </div>
                 </div>
 
-                {/* Question Type Selector */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
-                  <div className="flex space-x-4">
+                {/* Question Navigation Dots */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {questions.map((_, index) => (
                     <button
-                      onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'text' })}
-                      className={`inline-flex items-center px-4 py-2 rounded-md ${
-                        currentQuestion.type === 'text'
+                      key={index}
+                      onClick={() => {
+                        setCurrentQuestionIndex(index);
+                        setCurrentQuestion(questions[index]);
+                      }}
+                      className={`w-8 h-8 rounded-full text-sm font-medium ${
+                        currentQuestionIndex === index
                           ? 'bg-indigo-600 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      <Type className="h-5 w-5 mr-2" />
-                      Text Only
+                      {index + 1}
                     </button>
-                    <button
-                      onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'image' })}
-                      className={`inline-flex items-center px-4 py-2 rounded-md ${
-                        currentQuestion.type === 'image'
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <ImageIcon className="h-5 w-5 mr-2" />
-                      Image + Text
-                    </button>
-                  </div>
+                  ))}
+                  <button
+                    onClick={() => {
+                      setCurrentQuestionIndex(questions.length);
+                      setCurrentQuestion({
+                        id: questions.length + 1,
+                        question_text: '',
+                        type: 'text',
+                        options: ['', '', '', ''],
+                        correct_option: -1,
+                        difficulty_level: DifficultyLevel.MEDIUM
+                      });
+                    }}
+                    className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 flex items-center justify-center"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
                 </div>
 
-                {/* Difficulty Level Selector */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
-                  <div className="flex space-x-4">
-                    {([DifficultyLevel.EASY, DifficultyLevel.MEDIUM, DifficultyLevel.HARD] as DifficultyLevel[]).map((level) => (
-                      <button
-                        key={level}
-                        onClick={() => setCurrentQuestion({ ...currentQuestion, difficulty_level: level })}
-                        className={`px-4 py-2 rounded-md text-sm font-medium ${
-                          currentQuestion.difficulty_level === level
-                            ? level === DifficultyLevel.EASY
-                              ? 'bg-green-600 text-white'
-                              : level === DifficultyLevel.MEDIUM
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-red-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {level.charAt(0).toUpperCase() + level.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Question Text */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Question Text</label>
-                  <textarea
-                    value={currentQuestion.question_text}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_text: e.target.value })}
-                    rows={3}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    placeholder="Enter your question here"
-                  />
-                </div>
-
-                {/* Image Upload (if image type) */}
-                {currentQuestion.type === 'image' && (
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Question Image</label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                      <div className="space-y-1 text-center">
-                        {currentQuestion.image_url ? (
-                          <div>
-                            <img
-                              src={currentQuestion.image_url}
-                              alt="Question"
-                              className="mx-auto h-32 w-auto"
-                            />
-                            <button
-                              onClick={() => setCurrentQuestion({ ...currentQuestion, image_url: undefined })}
-                              className="mt-2 text-sm text-red-600 hover:text-red-500"
-                            >
-                              Remove Image
-                            </button>
+                {/* Question Preview */}
+                {questions.length > 0 && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Question Preview</h3>
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-900">{questions[currentQuestionIndex].question_text}</p>
+                      <div className="space-y-1">
+                        {questions[currentQuestionIndex].options.map((option, idx) => (
+                          <div
+                            key={idx}
+                            className={`text-sm p-2 rounded ${
+                              idx === questions[currentQuestionIndex].correct_option
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-white text-gray-800'
+                            }`}
+                          >
+                            {option}
                           </div>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                            <div className="flex text-sm text-gray-600">
-                              <label className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
-                                <span>Upload a file</span>
-                                <input
-                                  type="file"
-                                  className="sr-only"
-                                  accept="image/*"
-                                  onChange={handleImageUpload}
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        )}
+                        ))}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-2">
+                        Difficulty: {questions[currentQuestionIndex].difficulty_level}
                       </div>
                     </div>
                   </div>
                 )}
+              </div>
 
-                {/* Options */}
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700">Options</label>
-                  {currentQuestion.options.map((option, index) => (
-                    <div key={index} className="option-container">
-                      <input
-                        type="text"
-                        value={option.startsWith('[IMG]') ? '' : option}
-                        onChange={(e) => handleOptionChange(index, e.target.value)}
-                        placeholder={`Option ${index + 1}`}
-                      />
+              {/* Question Form */}
+              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+                <h2 className="text-lg font-medium text-gray-900 mb-4">
+                  {isEditing ? 'Edit Question' : 'Add Question'}
+                </h2>
+                <div className="space-y-6">
+                  {/* Question Text */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Question Text</label>
+                    <textarea
+                      value={currentQuestion.question_text}
+                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_text: e.target.value })}
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      placeholder="Enter your question here..."
+                    />
+                  </div>
+
+                  {/* Question Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Question Type</label>
+                    <select
+                      value={currentQuestion.type}
+                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, type: e.target.value as QuestionType })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    >
+                      <option value="text">Text</option>
+                      <option value="image">Image</option>
+                    </select>
+                  </div>
+
+                  {/* Image Upload for Question */}
+                  {currentQuestion.type === 'image' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Question Image</label>
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => handleOptionImageUpload(index, e)}
+                        onChange={handleImageUpload}
+                        className="mt-1 block w-full text-sm text-gray-500
+                          file:mr-4 file:py-2 file:px-4
+                          file:rounded-md file:border-0
+                          file:text-sm file:font-semibold
+                          file:bg-indigo-50 file:text-indigo-700
+                          hover:file:bg-indigo-100"
                       />
-                      {option.startsWith('[IMG]') && (
-                        <img 
-                          src={option.replace('[IMG]', '')} 
-                          alt={`Option ${index + 1}`} 
-                          style={{ maxWidth: '200px', marginTop: '10px' }}
-                        />
+                      {currentQuestion.image_url && (
+                        <div className="mt-2">
+                          <img
+                            src={currentQuestion.image_url}
+                            alt="Question"
+                            className="max-w-xs rounded-lg shadow-sm"
+                          />
+                        </div>
                       )}
                     </div>
-                  ))}
-                </div>
+                  )}
 
-                {/* Explanation */}
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Explanation (Optional)
-                  </label>
-                  <textarea
-                    value={currentQuestion.explanation || ''}
-                    onChange={(e) =>
-                      setCurrentQuestion({ ...currentQuestion, explanation: e.target.value })
-                    }
-                    rows={2}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    placeholder="Explain the correct answer (optional)"
-                  />
-                </div>
-
-                {/* Question Navigation */}
-                <div className="mt-8 border-t pt-6">
-                  <div className="flex justify-between items-center">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={handlePreviousQuestion}
-                        disabled={currentQuestionIndex === 0}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
-                      </button>
-                      <button
-                        onClick={handleNextQuestion}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {questions.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setCurrentQuestionIndex(index);
-                            setCurrentQuestion(questions[index]);
-                          }}
-                          className={`w-8 h-8 rounded-full text-sm font-medium ${
-                            currentQuestionIndex === index
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {index + 1}
-                        </button>
+                  {/* Options */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Options</label>
+                    <div className="mt-2 space-y-2">
+                      {currentQuestion.options.map((option, index) => (
+                        <div key={index} className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(e) => {
+                              const newOptions = [...currentQuestion.options];
+                              newOptions[index] = e.target.value;
+                              setCurrentQuestion({ ...currentQuestion, options: newOptions });
+                            }}
+                            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder={`Option ${index + 1}`}
+                          />
+                          <button
+                            onClick={() => {
+                              const newOptions = currentQuestion.options.filter((_, i) => i !== index);
+                              setCurrentQuestion({ ...currentQuestion, options: newOptions });
+                            }}
+                            className="p-1 text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="h-5 w-5" />
+                          </button>
+                        </div>
                       ))}
                       <button
                         onClick={() => {
-                          setCurrentQuestionIndex(questions.length);
                           setCurrentQuestion({
-                            id: questions.length + 1,
-                            question_text: '',
-                            type: 'text',
-                            options: ['', '', '', ''],
-                            correct_option: -1,
-                            difficulty_level: DifficultyLevel.MEDIUM
+                            ...currentQuestion,
+                            options: [...currentQuestion.options, '']
                           });
                         }}
-                        className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 flex items-center justify-center"
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-indigo-700 bg-indigo-100 hover:bg-indigo-200"
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Option
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Distribution Warnings */}
-                {questions.length > 0 && (
-                  <div className="mt-6">
-                    {Math.abs(difficultyDistribution[DifficultyLevel.EASY] - difficultyDistribution[DifficultyLevel.HARD]) > questions.length * 0.4 && (
-                      <div className="flex items-center space-x-2 text-yellow-700 bg-yellow-50 p-4 rounded-lg">
-                        <AlertTriangle className="h-5 w-5" />
-                        <span className="text-sm">
-                          Consider balancing the difficulty levels for a better assessment
-                        </span>
-                      </div>
-                    )}
-                    {Object.values(targetRatio).reduce((sum, val) => sum + val, 0) !== 100 && (
-                      <div className="mt-2 flex items-center space-x-2 text-red-700 bg-red-50 p-4 rounded-lg">
-                        <AlertTriangle className="h-5 w-5" />
-                        <span className="text-sm">
-                          The difficulty ratio must total 100%
-                        </span>
-                      </div>
-                    )}
+                  {/* Correct Option Input */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Correct Option</label>
+                    <div className="mt-2">
+                      <select
+                        value={currentQuestion.correct_option}
+                        onChange={(e) => setCurrentQuestion({ ...currentQuestion, correct_option: parseInt(e.target.value) })}
+                        className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      >
+                        <option value={-1}>Select correct option</option>
+                        {currentQuestion.options.map((_, index) => (
+                          <option key={index} value={index}>
+                            Option {index + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                )}
+
+                  {/* Difficulty Level */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Difficulty Level</label>
+                    <select
+                      value={currentQuestion.difficulty_level}
+                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, difficulty_level: e.target.value as DifficultyLevel })}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                    >
+                      <option value={DifficultyLevel.EASY}>Easy</option>
+                      <option value={DifficultyLevel.MEDIUM}>Medium</option>
+                      <option value={DifficultyLevel.HARD}>Hard</option>
+                    </select>
+                  </div>
+
+                  {/* Explanation */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Explanation</label>
+                    <textarea
+                      value={currentQuestion.explanation}
+                      onChange={(e) => setCurrentQuestion({ ...currentQuestion, explanation: e.target.value })}
+                      rows={2}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      placeholder="Explain why this is the correct answer..."
+                    />
+                  </div>
+
+                  {/* Save Question Button */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleSaveQuestion}
+                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      <Save className="h-5 w-5 mr-2" />
+                      Save Question
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
