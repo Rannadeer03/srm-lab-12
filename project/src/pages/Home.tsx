@@ -4,8 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { BookOpen, Users, BarChart, GraduationCap, Brain, Target, TestTube2, Rocket, Award, Globe, Laptop } from 'lucide-react';
 import Particles from 'react-tsparticles';
 import { loadFull } from 'tsparticles';
-import { TypeAnimation } from 'react-type-animation';
 import type { Engine } from 'tsparticles-engine';
+import { TypeAnimation } from 'react-type-animation';
 
 // Optimized Gradient Background with Parallax
 const GradientBackground = () => {

@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import List, Optional
-
-
+from pydantic import BaseModel, Field
 
 class User:
     def __init__(self, id: int, email: str, hashed_password: str):
@@ -9,39 +8,29 @@ class User:
         self.email = email
         self.hashed_password = hashed_password
 
+class Question(BaseModel):
+    question_text: str = Field(..., description="The text of the question")
+    question_image: Optional[str] = Field(None, description="URL to the question image if any")
+    options: List[str] = Field(..., description="List of answer options")
+    correct_answer: int = Field(..., description="Index of the correct answer (0-based)")
+    marks: int = Field(1, description="Marks for this question")
+    negative_marks: float = Field(0.25, description="Negative marks for wrong answer")
 
-class Test:
-    def __init__(self, id: int, title: str, subject: str, duration: int):
-        self.id = id
-        self.title = title
-        self.subject = subject
-        self.duration = duration
-        self.questions: List[Question] = []
+class Test(BaseModel):
+    title: str = Field(..., description="Title of the test")
+    subject_id: str = Field(..., description="ID of the subject")
+    duration: int = Field(..., description="Duration of test in minutes")
+    total_marks: int = Field(..., description="Total marks for the test")
+    instructions: str = Field(..., description="Test instructions")
+    questions: List[Question] = Field(..., description="List of questions")
+    created_by: str = Field(..., description="ID of the teacher who created the test")
+    created_at: datetime = Field(default_factory=datetime.now)
+    is_active: bool = Field(True, description="Whether the test is active")
 
-
-class Question:
-    def __init__(self, id: int, text: str, options: str, correct_answer: int, test_id: int):
-        self.id = id
-        self.text = text
-        self.options = options
-        self.correct_answer = correct_answer
-        self.test_id = test_id
-
-
-class TestResult:
-    def __init__(self, id: int, user_id: int, test_id: int, score: float, time_spent: int, submitted_at: datetime):
-        self.id = id
-        self.user_id = user_id
-        self.test_id = test_id
-        self.score = score
-        self.time_spent = time_spent
-        self.submitted_at = submitted_at
-        self.answers: List[UserAnswer] = []
-
-
-class UserAnswer:
-    def __init__(self, id: int, test_result_id: int, question_id: int, selected_option: int):
-        self.id = id
-        self.test_result_id = test_result_id
-        self.question_id = question_id
-        self.selected_option = selected_option
+class TestResult(BaseModel):
+    test_id: str = Field(..., description="ID of the test")
+    student_id: str = Field(..., description="ID of the student")
+    answers: List[int] = Field(..., description="List of selected answers (indexes)")
+    score: float = Field(..., description="Total score obtained")
+    time_taken: int = Field(..., description="Time taken in seconds")
+    submitted_at: datetime = Field(default_factory=datetime.now) 

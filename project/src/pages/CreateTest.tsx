@@ -1,1016 +1,378 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Save, Plus, Trash2, ChevronLeft, ChevronRight, CheckCircle, AlertTriangle, Image as ImageIcon, Type, Upload } from 'lucide-react';
-import { api } from '../services/api';
-import type { Subject, Question } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Trash2, Upload, Save } from 'lucide-react';
+import axios from 'axios';
+import { api, Question as APIQuestion } from '../services/api';
 
-// Define proper enum for difficulty levels
-enum DifficultyLevel {
-  EASY = 'easy',
-  MEDIUM = 'medium',
-  HARD = 'hard'
-}
-
-interface DifficultyDistribution {
-  [DifficultyLevel.EASY]: number;
-  [DifficultyLevel.MEDIUM]: number;
-  [DifficultyLevel.HARD]: number;
-}
-
-// Form handling interface that matches the component's property names
-interface QuestionFormData {
-  id: number;
-  question_text: string;
+interface Question extends APIQuestion {
+  difficulty_level: 'easy' | 'medium' | 'hard';
   type: 'text' | 'image';
   image_url?: string;
-  options: string[];
-  correct_option: number; // Keep as number for form handling, convert to string when submitting
-  difficulty_level: DifficultyLevel;
-  explanation?: string;
+  marks?: number;
+  negative_marks?: number;
 }
 
-// Update the participants state with proper typing and initial value
-interface Participant {
-  email: string;
-  id: string;
+interface Subject {
+  _id: string;
+  name: string;
+  code: string;
 }
 
-// Add or update the TestSchedule interface
-interface TestSchedule {
-  isScheduled: boolean;
-  scheduledDate: string;
-  scheduledTime: string;
-  timeLimit: number;
-  allowLateSubmissions: boolean;
-  accessWindow: { start: string; end: string };
-}
-
-export const CreateTest: React.FC = () => {
-
+const CreateTest: React.FC = () => {
     const navigate = useNavigate();
-    const location = useLocation();
-    const testToEdit = location.state?.testToEdit;
-    const isEditing = !!testToEdit;
-
-    const [testTitle, setTestTitle] = useState('');
-    const [subject, setSubject] = useState('');
-    const [duration, setDuration] = useState('');
-    const [questions, setQuestions] = useState<QuestionFormData[]>([]);
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-    const [currentQuestion, setCurrentQuestion] = useState<QuestionFormData>({
-      id: 1,
+  const [title, setTitle] = useState('');
+  const [subjectId, setSubjectId] = useState('');
+  const [duration, setDuration] = useState(60);
+  const [totalMarks, setTotalMarks] = useState(100);
+  const [instructions, setInstructions] = useState('');
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [questions, setQuestions] = useState<Question[]>([
+    {
       question_text: '',
-      type: 'text',
       options: ['', '', '', ''],
-      correct_option: -1,
-      difficulty_level: DifficultyLevel.MEDIUM
-    });
+      correct_option: '',
+      difficulty_level: 'medium',
+      type: 'text',
+      teacher_id: 0,
+      subject_id: subjectId
+    }
+  ]);
 
-    const [targetRatio, setTargetRatio] = useState({
-      [DifficultyLevel.EASY]: testToEdit?.targetDifficultyRatio?.easy || 30,
-      [DifficultyLevel.MEDIUM]: testToEdit?.targetDifficultyRatio?.medium || 50,
-      [DifficultyLevel.HARD]: testToEdit?.targetDifficultyRatio?.hard || 20
-    });
-
-    const [difficultyDistribution, setDifficultyDistribution] = useState<DifficultyDistribution>({
-      [DifficultyLevel.EASY]: testToEdit?.difficultyDistribution?.easy || 0,
-      [DifficultyLevel.MEDIUM]: testToEdit?.difficultyDistribution?.medium || 0,
-      [DifficultyLevel.HARD]: testToEdit?.difficultyDistribution?.hard || 0
-    });
-
-    const [error, setError] = useState<string | null>(null);
-  const [testSchedule, setTestSchedule] = useState<TestSchedule>({
-      isScheduled: false,
-      scheduledDate: '',
-      scheduledTime: '',
-      timeLimit: 60,
-      allowLateSubmissions: false,
-      accessWindow: { start: '', end: '' }
-    });
-
-
-    // Update the participants state with proper typing and initial value
-    const [participants, setParticipants] = useState<Participant[]>([]);
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const [subjects, setSubjects] = useState<Subject[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    // Fetch subjects when component mounts
     useEffect(() => {
       const fetchSubjects = async () => {
         try {
-          setLoading(true);
-          const fetchedSubjects = await api.getSubjects();
-          setSubjects(fetchedSubjects);
-          
-          // If editing, keep the existing subject, otherwise set to first available subject
-          if (!isEditing && fetchedSubjects.length > 0) {
-            setSubject(fetchedSubjects[0].name);
-          }
-        } catch (err) {
-          console.error('Error fetching subjects:', err);
-          setError('Failed to load subjects. Please try again later.');
+        const subjectsData = await api.getSubjects();
+        setSubjects(subjectsData);
+      } catch (error) {
+        console.error('Error fetching subjects:', error);
         } finally {
           setLoading(false);
         }
       };
 
       fetchSubjects();
-    }, [isEditing]);
+  }, []);
 
-    useEffect(() => {
-      if (testToEdit) {
-        setTestTitle(testToEdit.name);
-        setSubject(testToEdit.subject);
-        setDuration(testToEdit.duration.toString());
-        setQuestions(testToEdit.questions);
-        setCurrentQuestion(testToEdit.questions[0] || {
-          id: 1,
+  const handleAddQuestion = () => {
+    setQuestions([
+      ...questions,
+      {
           question_text: '',
+        options: ['', '', '', ''],
+        correct_option: '',
+        difficulty_level: 'medium',
           type: 'text',
-          options: ['', '', '', ''],
-          correct_option: -1,
-          difficulty_level: DifficultyLevel.MEDIUM
-        });
-        setDifficultyDistribution(testToEdit.difficultyDistribution);
-        setTargetRatio(testToEdit.targetDifficultyRatio || {
-          [DifficultyLevel.EASY]: 30,
-          [DifficultyLevel.MEDIUM]: 50,
-          [DifficultyLevel.HARD]: 20
-        });
+        teacher_id: 0,
+        subject_id: subjectId
       }
-    }, [testToEdit]);
+    ]);
+  };
 
-    useEffect(() => {
-      const newDistribution = questions.reduce(
-        (acc: DifficultyDistribution, q) => {
-          acc[q.difficulty_level as DifficultyLevel]++;
-          return acc;
-        },
-        {
-          [DifficultyLevel.EASY]: 0,
-          [DifficultyLevel.MEDIUM]: 0,
-          [DifficultyLevel.HARD]: 0
-        }
-      );
-      setDifficultyDistribution(newDistribution);
-    }, [questions]);
+  const handleRemoveQuestion = (index: number) => {
+    const newQuestions = questions.filter((_, i) => i !== index);
+    setQuestions(newQuestions);
+  };
 
-    const handleOptionChange = (index: number, value: string) => {
-      const newOptions = [...currentQuestion.options];
-      newOptions[index] = value;
-      setCurrentQuestion({ ...currentQuestion, options: newOptions });
+  const handleQuestionChange = (questionIndex: number, field: keyof Question, value: any) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[questionIndex] = {
+      ...updatedQuestions[questionIndex],
+      [field]: value
     };
+    setQuestions(updatedQuestions);
+  };
 
-    const handleOptionImageUpload = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newOptions = [...currentQuestion.options];
-          newOptions[index] = `[IMG]${reader.result}`; // Prefix to identify image content
-          setCurrentQuestion({ ...currentQuestion, options: newOptions });
-        };
-        reader.readAsDataURL(file);
-      }
-    };
+  const handleOptionChange = (questionIndex: number, optionIndex: number, value: string) => {
+    const updatedQuestions = [...questions];
+    updatedQuestions[questionIndex].options[optionIndex] = value;
+    setQuestions(updatedQuestions);
+  };
 
-    const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setCurrentQuestion({
-            ...currentQuestion,
-            image_url: reader.result as string
-          });
-        };
-        reader.readAsDataURL(file);
-      }
-    };
-
-    const handleSaveQuestion = () => {
-      if (currentQuestionIndex < questions.length) {
-        // Update existing question
+  const handleCorrectOptionChange = (questionIndex: number, value: string) => {
         const updatedQuestions = [...questions];
-        updatedQuestions[currentQuestionIndex] = currentQuestion;
+    updatedQuestions[questionIndex].correct_option = value;
         setQuestions(updatedQuestions);
-      } else {
-        // Add new question
-        setQuestions([...questions, currentQuestion]);
-      }
-      handleNextQuestion();
-    };
+  };
 
-    const handleNextQuestion = () => {
-      if (currentQuestionIndex < questions.length) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        setCurrentQuestion(questions[currentQuestionIndex + 1] || {
-          id: questions.length + 1,
-          question_text: '',
-          type: 'text',
-          options: ['', '', '', ''],
-          correct_option: -1,
-          difficulty_level: DifficultyLevel.MEDIUM
-        });
-      }
-    };
+  const handleImageUpload = async (questionIndex: number, file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('question_index', questionIndex.toString());
 
-    const handlePreviousQuestion = () => {
-      if (currentQuestionIndex > 0) {
-        setCurrentQuestionIndex(currentQuestionIndex - 1);
-        setCurrentQuestion(questions[currentQuestionIndex - 1]);
+      interface ImageUploadResponse {
+        image_path: string;
       }
-    };
 
-    const handleDeleteQuestion = () => {
-      const updatedQuestions = questions.filter((_, index) => index !== currentQuestionIndex);
-      setQuestions(updatedQuestions);
-      if (currentQuestionIndex >= updatedQuestions.length) {
-        setCurrentQuestionIndex(Math.max(0, updatedQuestions.length - 1));
+      const response = await axios.post<ImageUploadResponse>(`/api/tests/upload-image`, formData);
+      handleQuestionChange(questionIndex, 'image_url', response.data.image_path);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      // Validate required fields
+      if (!title || !subjectId || !duration || !totalMarks || !instructions) {
+        alert('Please fill in all required fields');
+        return;
       }
-      if (updatedQuestions.length === 0) {
-        setCurrentQuestion({
-          id: 1,
-          question_text: '',
-          type: 'text',
-          options: ['', '', '', ''],
-          correct_option: -1,
-          difficulty_level: DifficultyLevel.MEDIUM
-        });
-      } else {
-        setCurrentQuestion(updatedQuestions[currentQuestionIndex]);
+
+      // Validate questions
+      if (questions.length === 0) {
+        alert('Please add at least one question');
+        return;
       }
-    };
 
-    const handleSubmitTest = async () => {
-      try {
-        setIsSubmitting(true);
-        setError(null);
-
-        // Find the subject ID from the subjects array
-        const selectedSubject = subjects.find(s => s.name === subject);
-        if (!selectedSubject) {
-          throw new Error('Selected subject not found');
+      for (const question of questions) {
+        if (!question.question_text || !question.correct_option || question.options.some(opt => !opt)) {
+          alert('Please fill in all question details');
+          return;
         }
-
-        // Get teacher ID from localStorage and convert to number
-        const teacherId = parseInt(localStorage.getItem('teacherId') || '0');
-        if (!teacherId) {
-          throw new Error('Teacher ID not found');
-        }
-
-        // Transform QuestionFormData to API Question type
-        const transformedQuestions: Question[] = questions.map(q => ({
-          teacher_id: teacherId,
-          subject_id: selectedSubject._id,
-          question_text: q.question_text,
-          type: q.type,
-          image_url: q.image_url,
-          options: q.options,
-          correct_option: q.correct_option.toString(),
-          difficulty_level: q.difficulty_level.toLowerCase(),
-          explanation: q.explanation
-        }));
-
-        const testData = {
-          title: testTitle,
-          subject,
-          duration: parseInt(duration),
-          questions: transformedQuestions,
-          participants: participants.map(p => p.email),
-          test_schedule: {
-            is_scheduled: testSchedule.isScheduled,
-            scheduled_date: testSchedule.scheduledDate,
-            scheduled_time: testSchedule.scheduledTime,
-            time_limit: testSchedule.timeLimit,
-            allow_late_submissions: testSchedule.allowLateSubmissions,
-            access_window: testSchedule.accessWindow
-          },
-          difficulty_distribution: difficultyDistribution,
-          target_ratio: targetRatio
-        };
-
-        // Make API call using the api service
-        if (isEditing) {
-          await api.updateTest(testToEdit.id, testData);
-        } else {
-          await api.createTest(testData);
-        }
-
-        // Success - navigate to tests page
-        navigate('/tests');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
-        console.error('Submit error:', err);
-      } finally {
-        setIsSubmitting(false);
       }
-    };
 
-    const handleRatioChange = (level: DifficultyLevel, value: number) => {
-      const newRatio = { ...targetRatio, [level]: value };
-      const total = Object.values(newRatio).reduce((sum, val) => sum + val, 0);
+      // Format questions for submission
+      const formattedQuestions = questions.map(q => ({
+        text: q.question_text,
+        options: q.options.filter(opt => opt !== ''), // Remove empty options
+        correct_answer: q.correct_option,
+        subject_id: subjectId,
+        teacher_id: "1" // TODO: Replace with actual teacher ID
+      }));
+
+      // Create test data
+      const testData = {
+        title,
+        description: instructions,
+        subject_id: subjectId,
+        teacher_id: "1", // TODO: Replace with actual teacher ID
+        questions: formattedQuestions, // Send the complete question objects
+        duration_minutes: duration,
+        status: "active"
+      };
+
+      console.log('Submitting test data:', testData);
       
-      if (total <= 100) {
-        setTargetRatio(newRatio);
-      }
-    };
-
-    const isTestValid = () => {
-      // Check for at least one valid question
-      const hasValidQuestion = questions.some(q => 
-        q.question_text.trim() !== '' && 
-        q.correct_option !== -1 &&
-        q.options.every(opt => opt.trim() !== '')
-      );
+      const response = await axios.post('http://localhost:8000/tests', testData, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
-      return (
-        testTitle.trim() !== '' &&
-        subject !== '' &&
-        duration !== '' &&
-        parseInt(duration) > 0 &&
-        questions.length > 0 &&
-        hasValidQuestion
-      );
-    };
-
-
-    const getRatioStatus = () => {
-      const total = Object.values(targetRatio).reduce((sum, val) => sum + val, 0);
-      if (total < 100) return `${100 - total}% remaining to allocate`;
-      if (total > 100) return `${total - 100}% over allocation`;
-      return 'Ratio properly allocated';
-    };
-
-    // Add a function to handle adding participants
-    const handleAddParticipant = (email: string) => {
-      if (email && !participants.some(p => p.email === email)) {
-        setParticipants([
-          ...participants,
-          { 
-            email,
-            id: Math.random().toString(36).substr(2, 9) // Simple unique ID generation
-          }
-        ]);
+      if (response.status === 200) {
+        alert('Test created successfully!');
+        navigate('/teacher-dashboard');
+      } else {
+        throw new Error('Failed to create test');
+      }
+    } catch (error: any) {
+      console.error('Error creating test:', error);
+      if (error.response) {
+        alert(`Error creating test: ${error.response.data?.detail || error.message}`);
+      } else {
+        alert('An error occurred while creating the test');
+      }
       }
     };
 
     return (
       <div className="min-h-screen bg-gray-100 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              {isEditing ? 'Edit Test' : 'Create New Test'}
-            </h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Fill in the test details and add questions below.
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="text-center py-4">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500 mx-auto"></div>
-              <p className="mt-2 text-sm text-gray-600">Loading subjects...</p>
-            </div>
-          ) : (
-            <div className="bg-white shadow-sm rounded-lg p-6">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h1 className="text-2xl font-bold mb-6">Create New Test</h1>
+          
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Test Title</label>
                   <input
                     type="text"
-                    value={testTitle}
-                    onChange={(e) => setTestTitle(e.target.value)}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    placeholder="Enter test title"
+                  required
                   />
                 </div>
+              
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Subject</label>
+                  {loading ? (
+                    <div className="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100 h-10 animate-pulse" />
+                  ) : (
                   <select
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
+                      value={subjectId}
+                      onChange={(e) => setSubjectId(e.target.value)}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                  >
-                    <option value="">Select a subject</option>
-                    {subjects.map((subj) => (
-                      <option key={subj._id} value={subj.name}>
-                        {subj.name} ({subj.code})
+                      required
+                    >
+                      <option value="">Select Subject</option>
+                      {subjects.map((subject) => (
+                        <option key={subject._id} value={subject._id}>
+                          {subject.name} ({subject.code})
                       </option>
                     ))}
                   </select>
+                  )}
                 </div>
+              
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
                   <input
                     type="number"
                     value={duration}
-                    onChange={(e) => setDuration(e.target.value)}
+                  onChange={(e) => setDuration(Number(e.target.value))}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    placeholder="Enter duration"
+                  required
+                  />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Total Marks</label>
+                <input
+                  type="number"
+                  value={totalMarks}
+                  onChange={(e) => setTotalMarks(Number(e.target.value))}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  required
                   />
                 </div>
               </div>
 
-              {/* Test Details Section */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <div className="flex justify-between items-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {isEditing ? 'Edit Student Test' : 'Create New Student Test'}
-              </h1>
-
-                  <button
-                    onClick={handleSubmitTest}
-                    disabled={isSubmitting || !isTestValid()}
-                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                      isSubmitting || !isTestValid()
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700'
-                    }`}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-5 w-5 mr-2" />
-                    {isEditing ? 'Update Test' : 'Submit Student Test'}
-
-                      </>
-                    )}
-                  </button>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Instructions</label>
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                rows={3}
+                required
+              />
               </div>
 
-              {/* Test Schedule Section */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Test Schedule</h2>
-                <div className="space-y-6">
-                  {/* Enable Scheduling Toggle */}
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-medium text-gray-700">Enable Test Scheduling</label>
+            <div className="space-y-4">
+              <h2 className="text-lg font-medium">Questions</h2>
+              {questions.map((question, questionIndex) => (
+                <div key={questionIndex} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-4">
+                    <h3 className="text-md font-medium">Question {questionIndex + 1}</h3>
                     <button
-                      onClick={() => setTestSchedule(prev => ({
-                        ...prev,
-                        isScheduled: !prev.isScheduled
-                      }))}
-                      className={`relative inline-block w-12 h-6 ${
-                        testSchedule.isScheduled ? 'bg-indigo-600' : 'bg-gray-200'
-                      } rounded-full transition-colors duration-200 ease-in-out`}
+                      type="button"
+                      onClick={() => handleRemoveQuestion(questionIndex)}
+                      className="text-red-600 hover:text-red-800"
                     >
-                      <span
-                        className={`inline-block w-4 h-4 transform transition-transform duration-200 ease-in-out bg-white rounded-full shadow-md ${
-                          testSchedule.isScheduled ? 'translate-x-6' : 'translate-x-1'
-                        }`}
-                        style={{ marginTop: '4px' }}
-                      />
+                      <Trash2 className="h-5 w-5" />
                     </button>
                   </div>
 
-                  {testSchedule.isScheduled && (
-                    <>
-                      {/* Date and Time Selection */}
-                      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">Question Text</label>
+                      <textarea
+                        value={question.question_text}
+                        onChange={(e) => handleQuestionChange(questionIndex, 'question_text', e.target.value)}
+                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                        rows={2}
+                        required
+                      />
+                    </div>
+                    
                         <div>
-                          <label className="block text-sm font-medium text-gray-700">Test Date</label>
-                          <input
-                            type="date"
-                            value={testSchedule.scheduledDate}
-                            onChange={(e) => setTestSchedule({
-                              ...testSchedule,
-                              scheduledDate: e.target.value
-                            })}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            min={new Date().toISOString().split('T')[0]}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">Start Time</label>
-                          <input
-                            type="time"
-                            value={testSchedule.scheduledTime}
-                            onChange={(e) => setTestSchedule({
-                              ...testSchedule,
-                              scheduledTime: e.target.value
-                            })}
-                            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Access Window */}
-                      <div className="space-y-4">
-                        <label className="block text-sm font-medium text-gray-700">Access Window</label>
-                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                          <div>
-                            <label className="block text-xs text-gray-500">Start Time</label>
-                            <input
-                              type="datetime-local"
-                              value={testSchedule.accessWindow.start}
-                              onChange={(e) => setTestSchedule({
-                                ...testSchedule,
-                                accessWindow: {
-                                  ...testSchedule.accessWindow,
-                                  start: e.target.value
-                                }
-                              })}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-gray-500">End Time</label>
-                            <input
-                              type="datetime-local"
-                              value={testSchedule.accessWindow.end}
-                              onChange={(e) => setTestSchedule({
-                                ...testSchedule,
-                                accessWindow: {
-                                  ...testSchedule.accessWindow,
-                                  end: e.target.value
-                                }
-                              })}
-                              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Time Limit */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Time Limit (minutes)</label>
+                      <label className="block text-sm font-medium text-gray-700">Question Image (Optional)</label>
+                      <div className="mt-1 flex items-center">
                         <input
-                          type="number"
-                          value={testSchedule.timeLimit}
-                          onChange={(e) => setTestSchedule({
-                            ...testSchedule,
-                            timeLimit: parseInt(e.target.value)
-                          })}
-                          min="1"
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                          type="file"
+                          onChange={(e) => e.target.files?.[0] && handleImageUpload(questionIndex, e.target.files[0])}
+                          className="hidden"
+                          id={`image-upload-${questionIndex}`}
                         />
-                      </div>
-
-                      {/* Late Submissions */}
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id="allowLateSubmissions"
-                          checked={testSchedule.allowLateSubmissions}
-                          onChange={(e) => setTestSchedule({
-                            ...testSchedule,
-                            allowLateSubmissions: e.target.checked
-                          })}
-                          className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                        />
-                        <label htmlFor="allowLateSubmissions" className="text-sm text-gray-700">
-                          Allow late submissions
+                        <label
+                          htmlFor={`image-upload-${questionIndex}`}
+                          className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        >
+                          <Upload className="h-5 w-5 mr-2" />
+                          Upload Image
                         </label>
                       </div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Participant Management</h2>
-                <div className="space-y-6">
-                  {/* Add Individual Participant */}
-                  <div>
-                    <label htmlFor="participant-email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Add Participant
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        id="participant-email"
-                        type="email"
-                        placeholder="Enter participant email"
-                        className="flex-1 rounded-md border border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 px-3 py-2"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const input = e.currentTarget;
-                            handleAddParticipant(input.value);
-                            input.value = '';
-                          }
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          const input = document.getElementById('participant-email') as HTMLInputElement;
-                          handleAddParticipant(input.value);
-                          input.value = '';
-                        }}
-                        className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center"
-                      >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </button>
                     </div>
-                  </div>
-
-                  {/* Participant List */}
-                  <div>
-                    <div className="flex justify-between items-center mb-2">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Current Participants ({participants.length})
-                      </label>
-                      {participants.length > 0 && (
-                        <button
-                          onClick={() => setParticipants([])}
-                          className="text-sm text-red-600 hover:text-red-700"
-                        >
-                          Clear All
-                        </button>
-                      )}
-                    </div>
-                    <div className="border rounded-md max-h-48 overflow-y-auto">
-                      {participants.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          No participants added yet
+                    
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Options</label>
+                      {question.options.map((option, optionIndex) => (
+                        <div key={optionIndex} className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name={`correct-answer-${questionIndex}`}
+                            value={option}
+                            checked={question.correct_option === option}
+                            onChange={(e) => handleCorrectOptionChange(questionIndex, e.target.value)}
+                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300"
+                          />
+                          <input
+                            type="text"
+                            value={option}
+                            onChange={(e) => handleOptionChange(questionIndex, optionIndex, e.target.value)}
+                            className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                            placeholder={`Option ${optionIndex + 1}`}
+                            required
+                          />
                         </div>
-                      ) : (
-                        <ul className="divide-y divide-gray-200">
-                          {participants.map((participant) => (
-                            <li key={participant.id} className="flex justify-between items-center p-3 hover:bg-gray-50">
-                              <span className="text-sm text-gray-700">{participant.email}</span>
-                              <button
-                                onClick={() => {
-                                  setParticipants(participants.filter(p => p.id !== participant.id));
-                                }}
-                                className="text-red-600 hover:text-red-700"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
+                      ))}
+                      </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Marks</label>
+                        <input
+                          type="number"
+                          value={question.marks}
+                          onChange={(e) => handleQuestionChange(questionIndex, 'marks', Number(e.target.value))}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Negative Marks</label>
+                        <input
+                          type="number"
+                          value={question.negative_marks}
+                          onChange={(e) => handleQuestionChange(questionIndex, 'negative_marks', Number(e.target.value))}
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                          step="0.25"
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Difficulty Ratio Settings */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Target Difficulty Distribution</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Easy Questions ({targetRatio[DifficultyLevel.EASY]}%)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={targetRatio[DifficultyLevel.EASY]}
-                      onChange={(e) => handleRatioChange(DifficultyLevel.EASY, parseInt(e.target.value))}
-                      className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Medium Questions ({targetRatio[DifficultyLevel.MEDIUM]}%)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={targetRatio[DifficultyLevel.MEDIUM]}
-                      onChange={(e) => handleRatioChange(DifficultyLevel.MEDIUM, parseInt(e.target.value))}
-                      className="w-full h-2 bg-yellow-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Hard Questions ({targetRatio[DifficultyLevel.HARD]}%)
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={targetRatio[DifficultyLevel.HARD]}
-                      onChange={(e) => handleRatioChange(DifficultyLevel.HARD, parseInt(e.target.value))}
-                      className="w-full h-2 bg-red-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                  <div className="text-sm text-gray-600 mt-2">
-                    {getRatioStatus()}
-                  </div>
-                </div>
-              </div>
-
-              {/* Current Distribution */}
-              <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-                <h2 className="text-lg font-medium text-gray-900 mb-4">Current Question Distribution</h2>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-green-700">Easy</span>
-                      <span className="text-lg font-semibold text-green-700">{difficultyDistribution[DifficultyLevel.EASY]}</span>
-                    </div>
-                    <div className="w-full bg-green-200 rounded-full h-2">
-                      <div
-                        className="bg-green-600 rounded-full h-2"
-                        style={{ width: `${(difficultyDistribution[DifficultyLevel.EASY] / questions.length) * 100 || 0}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-yellow-700">Medium</span>
-                      <span className="text-lg font-semibold text-yellow-700">{difficultyDistribution[DifficultyLevel.MEDIUM]}</span>
-                    </div>
-                    <div className="w-full bg-yellow-200 rounded-full h-2">
-                      <div
-                        className="bg-yellow-600 rounded-full h-2"
-                        style={{ width: `${(difficultyDistribution[DifficultyLevel.MEDIUM] / questions.length) * 100 || 0}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-red-700">Hard</span>
-                      <span className="text-lg font-semibold text-red-700">{difficultyDistribution[DifficultyLevel.HARD]}</span>
-                    </div>
-                    <div className="w-full bg-red-200 rounded-full h-2">
-                      <div
-                        className="bg-red-600 rounded-full h-2"
-                        style={{ width: `${(difficultyDistribution[DifficultyLevel.HARD] / questions.length) * 100 || 0}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Question Editor */}
-              <div className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-lg font-medium text-gray-900">
-                    Question {currentQuestionIndex + 1} of {Math.max(questions.length, 1)}
-                  </h2>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={handleDeleteQuestion}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
-                    >
-                      <Trash2 className="h-4 w-4 mr-1" />
-                      Delete
-                    </button>
-                    <button
-                      onClick={handleSaveQuestion}
-                      className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      <Save className="h-4 w-4 mr-1" />
-                      Save & Next
-                    </button>
-                  </div>
-                </div>
-
-                {/* Question Type Selector */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
-                  <div className="flex space-x-4">
-                    <button
-                      onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'text' })}
-                      className={`inline-flex items-center px-4 py-2 rounded-md ${
-                        currentQuestion.type === 'text'
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <Type className="h-5 w-5 mr-2" />
-                      Text Only
-                    </button>
-                    <button
-                      onClick={() => setCurrentQuestion({ ...currentQuestion, type: 'image' })}
-                      className={`inline-flex items-center px-4 py-2 rounded-md ${
-                        currentQuestion.type === 'image'
-                          ? 'bg-indigo-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <ImageIcon className="h-5 w-5 mr-2" />
-                      Image + Text
-                    </button>
-                  </div>
-                </div>
-
-                {/* Difficulty Level Selector */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Difficulty Level</label>
-                  <div className="flex space-x-4">
-                    {([DifficultyLevel.EASY, DifficultyLevel.MEDIUM, DifficultyLevel.HARD] as DifficultyLevel[]).map((level) => (
-                      <button
-                        key={level}
-                        onClick={() => setCurrentQuestion({ ...currentQuestion, difficulty_level: level })}
-                        className={`px-4 py-2 rounded-md text-sm font-medium ${
-                          currentQuestion.difficulty_level === level
-                            ? level === DifficultyLevel.EASY
-                              ? 'bg-green-600 text-white'
-                              : level === DifficultyLevel.MEDIUM
-                              ? 'bg-yellow-600 text-white'
-                              : 'bg-red-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {level.charAt(0).toUpperCase() + level.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Question Text */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Question Text</label>
-                  <textarea
-                    value={currentQuestion.question_text}
-                    onChange={(e) => setCurrentQuestion({ ...currentQuestion, question_text: e.target.value })}
-                    rows={3}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    placeholder="Enter your question here"
-                  />
-                </div>
-
-                {/* Image Upload (if image type) */}
-                {currentQuestion.type === 'image' && (
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Question Image</label>
-                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-                      <div className="space-y-1 text-center">
-                        {currentQuestion.image_url ? (
-                          <div>
-                            <img
-                              src={currentQuestion.image_url}
-                              alt="Question"
-                              className="mx-auto h-32 w-auto"
-                            />
+              ))}
+              
                             <button
-                              onClick={() => setCurrentQuestion({ ...currentQuestion, image_url: undefined })}
-                              className="mt-2 text-sm text-red-600 hover:text-red-500"
+                type="button"
+                onClick={handleAddQuestion}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
                             >
-                              Remove Image
+                <Plus className="h-5 w-5 mr-2" />
+                Add Question
                             </button>
                           </div>
-                        ) : (
-                          <div className="flex flex-col items-center">
-                            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                            <div className="flex text-sm text-gray-600">
-                              <label className="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500">
-                                <span>Upload a file</span>
-                                <input
-                                  type="file"
-                                  className="sr-only"
-                                  accept="image/*"
-                                  onChange={handleImageUpload}
-                                />
-                              </label>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Options */}
-                <div className="space-y-4">
-                  <label className="block text-sm font-medium text-gray-700">Options</label>
-                  {currentQuestion.options.map((option, index) => (
-                    <div key={index} className="option-container">
-                      <input
-                        type="text"
-                        value={option.startsWith('[IMG]') ? '' : option}
-                        onChange={(e) => handleOptionChange(index, e.target.value)}
-                        placeholder={`Option ${index + 1}`}
-                      />
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleOptionImageUpload(index, e)}
-                      />
-                      {option.startsWith('[IMG]') && (
-                        <img 
-                          src={option.replace('[IMG]', '')} 
-                          alt={`Option ${index + 1}`} 
-                          style={{ maxWidth: '200px', marginTop: '10px' }}
-                        />
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Explanation */}
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Explanation (Optional)
-                  </label>
-                  <textarea
-                    value={currentQuestion.explanation || ''}
-                    onChange={(e) =>
-                      setCurrentQuestion({ ...currentQuestion, explanation: e.target.value })
-                    }
-                    rows={2}
-                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    placeholder="Explain the correct answer (optional)"
-                  />
-                </div>
-
-                {/* Question Navigation */}
-                <div className="mt-8 border-t pt-6">
-                  <div className="flex justify-between items-center">
-                    <div className="flex space-x-2">
+            
+            <div className="flex justify-end">
                       <button
-                        onClick={handlePreviousQuestion}
-                        disabled={currentQuestionIndex === 0}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-                      >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
+                type="submit"
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                <Save className="h-5 w-5 mr-2" />
+                Create Test
                       </button>
-                      <button
-                        onClick={handleNextQuestion}
-                        className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                      >
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {questions.map((_, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setCurrentQuestionIndex(index);
-                            setCurrentQuestion(questions[index]);
-                          }}
-                          className={`w-8 h-8 rounded-full text-sm font-medium ${
-                            currentQuestionIndex === index
-                              ? 'bg-indigo-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {index + 1}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => {
-                          setCurrentQuestionIndex(questions.length);
-                          setCurrentQuestion({
-                            id: questions.length + 1,
-                            question_text: '',
-                            type: 'text',
-                            options: ['', '', '', ''],
-                            correct_option: -1,
-                            difficulty_level: DifficultyLevel.MEDIUM
-                          });
-                        }}
-                        className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 flex items-center justify-center"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Distribution Warnings */}
-                {questions.length > 0 && (
-                  <div className="mt-6">
-                    {Math.abs(difficultyDistribution[DifficultyLevel.EASY] - difficultyDistribution[DifficultyLevel.HARD]) > questions.length * 0.4 && (
-                      <div className="flex items-center space-x-2 text-yellow-700 bg-yellow-50 p-4 rounded-lg">
-                        <AlertTriangle className="h-5 w-5" />
-                        <span className="text-sm">
-                          Consider balancing the difficulty levels for a better assessment
-                        </span>
-                      </div>
-                    )}
-                    {Object.values(targetRatio).reduce((sum, val) => sum + val, 0) !== 100 && (
-                      <div className="mt-2 flex items-center space-x-2 text-red-700 bg-red-50 p-4 rounded-lg">
-                        <AlertTriangle className="h-5 w-5" />
-                        <span className="text-sm">
-                          The difficulty ratio must total 100%
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
-          )}
+          </form>
         </div>
       </div>
-    )
+    </div>
+  );
   };
+
+export default CreateTest; 

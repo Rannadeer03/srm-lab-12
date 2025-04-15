@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.endpoints import auth, tests
+from .routes import test
+from .database.mongodb import connect_to_mongo, close_mongo_connection
 
 app = FastAPI(
     title="FastAPI Sawar Backend",
@@ -8,18 +9,25 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS configuration
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Include routers
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(tests.router, prefix="/tests", tags=["tests"])
+app.include_router(test.router)
+
+@app.on_event("startup")
+async def startup_db_client():
+    await connect_to_mongo()
+
+@app.on_event("shutdown")
+async def shutdown_db_client():
+    await close_mongo_connection()
 
 @app.get("/")
 def read_root():

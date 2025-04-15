@@ -5,20 +5,16 @@ import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
 import SplashScreen from "./components/splashScreen";
 import { Login } from "./pages/Login";
-import { StudentDashboard } from "./pages/StudentDashboard";
 import { TeacherDashboard } from "./pages/TeacherDashboard";
 import { NewStudentDashboard } from './pages/NewStudentDashboard';
 import { StudyMaterials } from './pages/StudyMaterials';
-import { CreateTest } from "./pages/CreateTest";
-import TestInterface from "./pages/TestInterface";
 import Home from "./pages/Home";
 import { CreateProfile } from './pages/CreateProfile';
-import StundentTestResults from "./pages/StundentTestResults";
-import TeacherTestResults from "./pages/TeacherTestResults";
 import TeacherAssignmentUpload from "./components/TeacherAssignmentUpload";
 import TeacherCourseUpload from "./components/TeacherCourseUpload";
 import StudentAssignmentView from "./components/StudentAssignmentView";
-import SubjectManager from "./components/SubjectManager";
+import CreateTest from './pages/CreateTest';
+import JeeTestInterface from './pages/JeeTestInterface';
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -33,7 +29,6 @@ const App: React.FC = () => {
   return (
     <BrowserRouter>
       <div className="min-h-screen flex flex-col">
-        <SubjectManager />
         <Header />
         <main className="flex-grow">
           <Routes>
@@ -41,14 +36,13 @@ const App: React.FC = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/create-profile" element={<CreateProfile />} />
             <Route path="/student-dashboard" element={<NewStudentDashboard />} />
-            <Route path="/student-tests" element={<StudentDashboard />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
             <Route path="/study-materials" element={<StudyMaterials />} />
-            <Route path="/create-test" element={<CreateTest />} />
-            <Route path="/test-interface" element={<TestInterface />} />
             <Route path="/teacher/assignments" element={<TeacherAssignmentUpload />} />
             <Route path="/teacher/course-materials" element={<TeacherCourseUpload />} />
             <Route path="/student/assignments" element={<StudentAssignmentView />} />
+            <Route path="/teacher/create-test" element={<CreateTest />} />
+            <Route path="/tests/:testId" element={<JeeTestInterface />} />
           </Routes>
         </main>
         <Footer />
