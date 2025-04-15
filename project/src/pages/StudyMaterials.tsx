@@ -50,18 +50,50 @@ export const StudyMaterials: React.FC = () => {
     }
   };
 
-  const handlePdfAction = (material: CourseMaterial, action: 'view' | 'download') => {
-    const fileUrl = `${API_BASE_URL}/materials/${material.path}`;
-    
-    if (action === 'view') {
-      window.open(fileUrl, '_blank');
-    } else {
-      const link = document.createElement('a');
-      link.href = fileUrl;
-      link.download = material.filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const handlePdfAction = async (material: CourseMaterial, action: 'view' | 'download') => {
+    try {
+      setError(''); // Clear any previous errors
+      
+      // Check if we have a valid path
+      const filePath = material.path || material.file_path;
+      if (!filePath) {
+        setError('File path is missing. Please contact your teacher.');
+        return;
+      }
+
+      // Ensure the path is properly formatted
+      const formattedPath = filePath.startsWith('course_materials/') ? filePath : `course_materials/${filePath}`;
+      const fileUrl = `${API_BASE_URL}/materials/${formattedPath}`;
+      
+      if (action === 'view') {
+        // For viewing, open in a new tab
+        window.open(fileUrl, '_blank');
+      } else {
+        // For downloading, use the API service to handle the download
+        try {
+          const response = await fetch(fileUrl);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.detail || `Failed to download file: ${response.status}`);
+          }
+          
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = material.filename || 'download';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (error) {
+          console.error('Download error:', error);
+          setError(error instanceof Error ? error.message : 'Failed to download file');
+        }
+      }
+    } catch (error) {
+      console.error('Error handling file action:', error);
+      setError(error instanceof Error ? error.message : 'Failed to process the file. Please try again later.');
     }
   };
 
@@ -153,6 +185,9 @@ export const StudyMaterials: React.FC = () => {
                         <div className="flex items-center space-x-4 text-sm text-gray-500 mt-2">
                           <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs">
                             {material.materialType}
+                          </span>
+                          <span className="bg-green-50 text-green-700 px-2 py-1 rounded-full text-xs">
+                            {material.subject_name} ({material.subject_code})
                           </span>
                           <div className="flex items-center">
                             <Clock className="h-4 w-4 mr-1" />

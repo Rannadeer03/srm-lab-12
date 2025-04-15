@@ -138,6 +138,11 @@ async def upload_assignment(
     file: UploadFile = File(...)
 ):
     try:
+        # Get subject information
+        subject = await db.subjects.find_one({"_id": ObjectId(subject_id)})
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        
         # Create assignment directory if it doesn't exist
         os.makedirs(ASSIGNMENT_FOLDER, exist_ok=True)
         
@@ -157,6 +162,10 @@ async def upload_assignment(
             "description": description,
             "due_date": due_date,
             "file_path": unique_filename,
+            "path": f"assignments/{unique_filename}",
+            "filename": file.filename,
+            "subject_name": subject["name"],
+            "subject_code": subject["code"],
             "created_at": datetime.now().isoformat()
         }
         
@@ -231,6 +240,17 @@ async def get_student_assignments():
     try:
         logger.info("Fetching student assignments")
         assignments = await db.assignments.find().to_list(length=100)
+        
+        # Add subject information to each assignment if missing
+        for assignment in assignments:
+            if 'subject_name' not in assignment or 'subject_code' not in assignment:
+                subject = await db.subjects.find_one({"_id": ObjectId(assignment['subject_id'])})
+                if subject:
+                    assignment['subject_name'] = subject['name']
+                    assignment['subject_code'] = subject['code']
+                if 'file_path' in assignment and 'path' not in assignment:
+                    assignment['path'] = f"assignments/{assignment['file_path']}"
+        
         logger.info(f"Found {len(assignments)} assignments")
         return [serialize_doc(a) for a in assignments]
     except Exception as e:
@@ -243,6 +263,16 @@ async def get_student_assignments_by_subject(subject_id: str):
     try:
         logger.info(f"Fetching student assignments for subject_id: {subject_id}")
         assignments = await db.assignments.find({"subject_id": subject_id}).to_list(length=100)
+        
+        # Add subject information to each assignment if missing
+        subject = await db.subjects.find_one({"_id": ObjectId(subject_id)})
+        if subject:
+            for assignment in assignments:
+                assignment['subject_name'] = subject['name']
+                assignment['subject_code'] = subject['code']
+                if 'file_path' in assignment and 'path' not in assignment:
+                    assignment['path'] = f"assignments/{assignment['file_path']}"
+        
         logger.info(f"Found {len(assignments)} assignments")
         return [serialize_doc(a) for a in assignments]
     except Exception as e:
@@ -332,6 +362,11 @@ async def upload_course_material(
     file: UploadFile = File(...)
 ):
     try:
+        # Get subject information
+        subject = await db.subjects.find_one({"_id": ObjectId(subject_id)})
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        
         # Create course material directory if it doesn't exist
         os.makedirs(COURSE_MATERIAL_FOLDER, exist_ok=True)
         
@@ -351,6 +386,10 @@ async def upload_course_material(
             "description": description,
             "material_type": material_type,
             "file_path": unique_filename,
+            "path": f"course_materials/{unique_filename}",
+            "filename": file.filename,
+            "subject_name": subject["name"],
+            "subject_code": subject["code"],
             "created_at": datetime.now().isoformat()
         }
         
@@ -358,6 +397,7 @@ async def upload_course_material(
         material_data['_id'] = str(result.inserted_id)
         return material_data
     except Exception as e:
+        logger.error(f"Error uploading course material: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Teacher: Get Course Materials by Subject
@@ -370,23 +410,64 @@ async def get_course_materials_by_subject(subject_id: str):
 @app.get('/materials/{file_path:path}')
 async def get_material_file(file_path: str):
     try:
+        logger.info(f"Attempting to serve file: {file_path}")
+        
+        # Normalize the path and ensure it's within the upload directory
         full_path = os.path.join(UPLOAD_FOLDER, file_path)
+        full_path = os.path.normpath(full_path)
+        
+        # Convert both paths to absolute paths for comparison
+        upload_dir = os.path.abspath(UPLOAD_FOLDER)
+        requested_path = os.path.abspath(full_path)
+        
+        # Security check to prevent directory traversal
+        if not requested_path.startswith(upload_dir):
+            logger.error(f"Access denied: {requested_path} is outside of {upload_dir}")
+            raise HTTPException(status_code=403, detail="Access denied")
+        
         if not os.path.exists(full_path):
+            logger.error(f"File not found: {full_path}")
             raise HTTPException(status_code=404, detail="File not found")
+        
+        # Determine the correct media type
+        content_type, _ = mimetypes.guess_type(full_path)
+        if not content_type:
+            content_type = 'application/octet-stream'
+            
+        logger.info(f"Serving file {full_path} with content type {content_type}")
         
         return FileResponse(
             path=full_path,
             filename=os.path.basename(file_path),
-            media_type='application/octet-stream'
+            media_type=content_type
         )
+    except HTTPException as he:
+        raise he
     except Exception as e:
+        logger.error(f"Error serving file {file_path}: {str(e)}")
+        logger.exception("Full traceback:")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Student: Get Course Materials by Subject
 @app.get('/student/course-material/{subject_id}')
 async def get_student_course_materials(subject_id: str):
-    materials = await db.course_materials.find({"subject_id": subject_id}).to_list(length=100)
-    return [serialize_doc(m) for m in materials]
+    try:
+        # Get subject information
+        subject = await db.subjects.find_one({"_id": ObjectId(subject_id)})
+        if not subject:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        
+        materials = await db.course_materials.find({"subject_id": subject_id}).to_list(length=100)
+        # Add subject information to each material
+        for material in materials:
+            material['subject_name'] = subject['name']
+            material['subject_code'] = subject['code']
+            if 'file_path' in material and 'path' not in material:
+                material['path'] = f"course_materials/{material['file_path']}"
+        return [serialize_doc(m) for m in materials]
+    except Exception as e:
+        logger.error(f"Error fetching course materials: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Initialize collections and test data
 async def init_collections():

@@ -52,6 +52,7 @@ export interface CourseMaterial {
   filename: string;
   stored_filename: string;
   path: string;
+  file_path?: string;
   subject_name: string;
   subject_code: string;
   upload_date: string;
