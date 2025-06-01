@@ -1,11 +1,10 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 export const AuthCallback: React.FC = () => {
   const navigate = useNavigate();
-  const { profile, user, initialize } = useAuthStore();
+  const { initialize } = useAuthStore();
 
   useEffect(() => {
     const handleAuthCallback = async () => {

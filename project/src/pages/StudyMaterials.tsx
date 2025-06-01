@@ -1,9 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileText, Download, Eye, Search, ChevronRight, ArrowLeft, Clock, BookOpen } from 'lucide-react';
-import { api } from '../services/api';
-import { API_BASE_URL } from '../config';
-import type { Subject, CourseMaterial } from '../services/api';
+import { supabase } from '../lib/supabase';
+
+interface Subject {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+}
+
+interface CourseMaterial {
+  id: string;
+  title: string;
+  description: string;
+  subject_id: string;
+  subject_name: string;
+  subject_code: string;
+  material_type: string;
+  file_path: string;
+  filename: string;
+  upload_date: string;
+}
 
 export const StudyMaterials: React.FC = () => {
   const navigate = useNavigate();
@@ -21,14 +39,38 @@ export const StudyMaterials: React.FC = () => {
         setLoading(true);
         setError('');
         
-        // Fetch subjects
-        const fetchedSubjects = await api.getSubjects();
-        setSubjects(fetchedSubjects);
+        // Fetch subjects from Supabase
+        const { data: subjectsData, error: subjectsError } = await supabase
+          .from('subjects')
+          .select('*');
+
+        if (subjectsError) throw subjectsError;
+        setSubjects(subjectsData || []);
 
         // If a subject is selected, fetch its materials
         if (selectedSubject) {
-          const subjectMaterials = await api.getStudentCourseMaterials(selectedSubject);
-          setMaterials(subjectMaterials);
+          const { data: materialsData, error: materialsError } = await supabase
+            .from('course_materials')
+            .select('*, subjects(name, code)')
+            .eq('subject_id', selectedSubject);
+
+          if (materialsError) throw materialsError;
+
+          // Transform the data to match our interface
+          const transformedMaterials = (materialsData || []).map(material => ({
+            id: material.id,
+            title: material.title,
+            description: material.description,
+            subject_id: material.subject_id,
+            subject_name: material.subjects.name,
+            subject_code: material.subjects.code,
+            material_type: material.material_type,
+            file_path: material.file_path,
+            filename: material.filename,
+            upload_date: material.created_at
+          }));
+
+          setMaterials(transformedMaterials);
         }
       } catch (err) {
         console.error('Error fetching data:', err);
@@ -54,42 +96,22 @@ export const StudyMaterials: React.FC = () => {
     try {
       setError(''); // Clear any previous errors
       
-      // Check if we have a valid path
-      const filePath = material.path || material.file_path;
-      if (!filePath) {
-        setError('File path is missing. Please contact your teacher.');
-        return;
-      }
-
-      // Ensure the path is properly formatted
-      const formattedPath = filePath.startsWith('course_materials/') ? filePath : `course_materials/${filePath}`;
-      const fileUrl = `${API_BASE_URL}/materials/${formattedPath}`;
+      // Get the public URL for the file
+      const { data: { publicUrl } } = supabase.storage
+        .from('course_materials')
+        .getPublicUrl(material.file_path);
       
       if (action === 'view') {
         // For viewing, open in a new tab
-        window.open(fileUrl, '_blank');
+        window.open(publicUrl, '_blank');
       } else {
-        // For downloading, use the API service to handle the download
-        try {
-          const response = await fetch(fileUrl);
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.detail || `Failed to download file: ${response.status}`);
-          }
-          
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = material.filename || 'download';
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          window.URL.revokeObjectURL(url);
-        } catch (error) {
-          console.error('Download error:', error);
-          setError(error instanceof Error ? error.message : 'Failed to download file');
-        }
+        // For downloading, create a temporary link
+        const link = document.createElement('a');
+        link.href = publicUrl;
+        link.download = material.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
       }
     } catch (error) {
       console.error('Error handling file action:', error);
@@ -102,7 +124,7 @@ export const StudyMaterials: React.FC = () => {
   );
 
   const getCurrentSubject = (): Subject | undefined => 
-    subjects.find(s => s._id === selectedSubject);
+    subjects.find(s => s.id === selectedSubject);
 
   if (loading) {
     return (
@@ -171,7 +193,7 @@ export const StudyMaterials: React.FC = () => {
             ) : (
               materials.map((material) => (
                 <div
-                  key={material._id}
+                  key={material.id}
                   className="bg-white rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow duration-200"
                 >
                   <div className="flex items-center justify-between mb-4">
@@ -184,7 +206,7 @@ export const StudyMaterials: React.FC = () => {
                         <p className="text-sm text-gray-600 mt-1">{material.description}</p>
                         <div className="flex items-center space-x-4 text-sm text-gray-500 mt-2">
                           <span className="bg-blue-50 text-blue-700 px-2 py-1 rounded-full text-xs">
-                            {material.materialType}
+                            {material.material_type}
                           </span>
                           <span className="bg-green-50 text-green-700 px-2 py-1 rounded-full text-xs">
                             {material.subject_name} ({material.subject_code})
@@ -222,8 +244,8 @@ export const StudyMaterials: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSubjects.map((subject) => (
               <button
-                key={subject._id}
-                onClick={() => setSelectedSubject(subject._id)}
+                key={subject.id}
+                onClick={() => setSelectedSubject(subject.id)}
                 className="bg-white rounded-lg shadow-sm p-6 text-left hover:shadow-md transition-shadow duration-200"
               >
                 <div className="flex items-center justify-between">

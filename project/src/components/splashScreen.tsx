@@ -4,6 +4,7 @@ import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 import { GraduationCap, Book, Shield } from "lucide-react";
 import useSound from "use-sound";
+import { useNavigate } from 'react-router-dom';
 
 // Using a CDN-hosted sound file instead of local file
 const WHOOSH_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3";
@@ -127,9 +128,18 @@ const ProgressBar = ({ progress }: { progress: number }) => (
 
 // SplashScreen Component
 const SplashScreen: React.FC = () => {
+  const navigate = useNavigate();
   const [themeIndex, setThemeIndex] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
-  const [playWhoosh] = useSound(WHOOSH_SOUND_URL);
+  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [play] = useSound('/sounds/splash.mp3', { 
+    volume: 0.5,
+    onplay: () => {
+      if (audioContext?.state === 'suspended') {
+        audioContext.resume();
+      }
+    }
+  });
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   const themes = [
@@ -139,18 +149,35 @@ const SplashScreen: React.FC = () => {
   ];
 
   useEffect(() => {
-    playWhoosh();
+    // Initialize audio context after user interaction
+    const initAudio = () => {
+      if (!audioContext) {
+        const context = new AudioContext();
+        setAudioContext(context);
+      }
+    };
+
+    // Add click event listener to initialize audio
+    document.addEventListener('click', initAudio, { once: true });
+    document.addEventListener('keydown', initAudio, { once: true });
+
+    // Navigate to login after splash screen
+    const timer = setTimeout(() => {
+      navigate('/login');
+    }, 3000);
+
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('click', initAudio);
+      document.removeEventListener('keydown', initAudio);
+    };
+  }, [navigate, audioContext]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setThemeIndex((prev) => (prev + 1) % themes.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, [playWhoosh, themes.length]);
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setShowLogin(true);
-    }, 5000);
-    return () => clearTimeout(timeout);
   }, []);
 
   useEffect(() => {

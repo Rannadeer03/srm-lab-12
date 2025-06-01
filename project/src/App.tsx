@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -18,6 +18,14 @@ import JeeTestInterface from './pages/JeeTestInterface';
 import { Register } from './pages/Register';
 import { AuthCallback } from './pages/AuthCallback';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { Profile } from './pages/Profile';
+
+// Simple loading screen component
+const LoadingScreen = () => (
+  <div className="fixed inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+    <div className="w-16 h-16 border-t-4 border-b-4 border-white rounded-full animate-spin" />
+  </div>
+);
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -27,19 +35,21 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  if (loading) return <SplashScreen />;
+  if (loading) return <LoadingScreen />;
 
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="min-h-screen flex flex-col">
         <Header />
         <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route path="/" element={<SplashScreen />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/create-profile" element={<CreateProfile />} />
             <Route path="/student-dashboard" element={<NewStudentDashboard />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/study-materials" element={<StudyMaterials />} />
             <Route path="/teacher/assignments" element={<TeacherAssignmentUpload />} />
             <Route path="/teacher/course-materials" element={<TeacherCourseUpload />} />
@@ -48,7 +58,9 @@ const App: React.FC = () => {
             <Route path="/tests/:testId" element={<JeeTestInterface />} />
             <Route path="/register" element={<Register />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            {/* Catch all route - redirect to home */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
         <Footer />

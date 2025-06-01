@@ -6,54 +6,84 @@ import TeacherAssignmentList from './TeacherAssignmentList';
 // Mock data for engineering subjects
 const engineeringSubjects: Subject[] = [
   {
-    _id: '507f1f77bcf86cd799439011',
+    id: '507f1f77bcf86cd799439011',
     name: 'Engineering Mathematics',
-    code: '001'
+    code: '001',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439012',
+    id: '507f1f77bcf86cd799439012',
     name: 'Electric Circuits',
-    code: '002'
+    code: '002',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439013',
+    id: '507f1f77bcf86cd799439013',
     name: 'Electromagnetic Fields',
-    code: '003'
+    code: '003',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439014',
+    id: '507f1f77bcf86cd799439014',
     name: 'Signals and Systems',
-    code: '004'
+    code: '004',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439015',
+    id: '507f1f77bcf86cd799439015',
     name: 'Electrical Machines',
-    code: '005'
+    code: '005',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439016',
+    id: '507f1f77bcf86cd799439016',
     name: 'Power Systems',
-    code: '006'
+    code: '006',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439017',
+    id: '507f1f77bcf86cd799439017',
     name: 'Control Systems',
-    code: '007'
+    code: '007',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439018',
+    id: '507f1f77bcf86cd799439018',
     name: 'Electrical and Electronic Measurements',
-    code: '008'
+    code: '008',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439019',
+    id: '507f1f77bcf86cd799439019',
     name: 'Analog and Digital Electronics',
-    code: '009'
+    code: '009',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   },
   {
-    _id: '507f1f77bcf86cd799439020',
+    id: '507f1f77bcf86cd799439020',
     name: 'Power Electronics',
-    code: '010'
+    code: '010',
+    teacher_id: '',
+    created_at: '',
+    updated_at: ''
   }
 ];
 
@@ -225,7 +255,7 @@ const TeacherAssignmentUpload: React.FC = () => {
                 >
                   <option value="">Select a subject</option>
                   {subjects.map((subject) => (
-                    <option key={subject._id} value={subject._id}>
+                    <option key={subject.id} value={subject.id}>
                       {subject.name} ({subject.code})
                     </option>
                   ))}

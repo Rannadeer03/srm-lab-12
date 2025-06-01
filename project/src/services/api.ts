@@ -15,21 +15,28 @@ interface ProfileData {
 export type Question = SupabaseQuestion;
 
 export interface Subject {
-  _id: string;
+  id: string;
   name: string;
   code: string;
+  teacher_id: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Assignment {
-  _id: string;
+  id: string;
   subject_id: string;
   title: string;
   description: string;
   due_date: string;
+  file_path: string;
   filename: string;
-  path: string;
-  subject_name: string;
-  subject_code: string;
+  created_at: string;
+  updated_at: string;
+  subject?: {
+    name: string;
+    code: string;
+  };
 }
 
 export interface StudyMaterial {
@@ -140,42 +147,51 @@ export const api = {
   baseUrl: API_BASE_URL,
 
   // Subjects
-  async addSubject(subject: Omit<Subject, '_id'>) {
-    const response = await fetch(`${API_BASE_URL}/teacher/subjects`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
+  async addSubject(subject: Omit<Subject, 'id' | 'teacher_id' | 'created_at' | 'updated_at'>) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('subjects')
+      .insert([{
         name: subject.name,
-        code: subject.code
-      }),
-    });
-    if (!response.ok) {
-      throw new Error('Failed to add subject');
-    }
-    return response.json();
+        code: subject.code,
+        teacher_id: user.id
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   async getSubjects() {
-    const response = await fetch(`${API_BASE_URL}/teacher/subjects`);
-    return response.json();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('subjects')
+      .select('*')
+      .eq('teacher_id', user.id);
+
+    if (error) throw error;
+    return data;
   },
 
   async deleteSubject(subjectId: string) {
-    const response = await fetch(`${API_BASE_URL}/teacher/subjects/${subjectId}`, {
-      method: 'DELETE',
-    });
-    if (!response.ok) {
-      throw new Error('Failed to delete subject');
-    }
-    return response.json();
+    const { error } = await supabase
+      .from('subjects')
+      .delete()
+      .eq('id', subjectId);
+
+    if (error) throw error;
+    return { success: true };
   },
 
   async deleteAllSubjects() {
     try {
       const subjects = await this.getSubjects();
-      const deletePromises = subjects.map((subject: Subject) => this.deleteSubject(subject._id));
+      const deletePromises = subjects.map((subject: Subject) => this.deleteSubject(subject.id));
       await Promise.all(deletePromises);
     } catch (error) {
       console.error('Error deleting subjects:', error);
@@ -231,6 +247,9 @@ export const api = {
     dueDate: string,
     file: File
   ): Promise<Assignment> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
     // Validate file type
     const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
     if (!allowedTypes.includes(file.type)) {
@@ -243,25 +262,36 @@ export const api = {
       throw new Error('File size should not exceed 10MB');
     }
 
-    const formData = new FormData();
-    formData.append('subject_id', subjectId);
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('due_date', dueDate);
-    formData.append('file', file);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/teacher/assignments`, {
-        method: 'POST',
-        body: formData,
-      });
+      // Upload file to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Failed to upload assignment' }));
-        throw new Error(errorData.detail || 'Failed to upload assignment');
-      }
+      const { error: uploadError } = await supabase.storage
+        .from('assignments')
+        .upload(filePath, file);
 
-      const data = await response.json();
+      if (uploadError) throw uploadError;
+
+      // Create assignment record
+      const { data, error } = await supabase
+        .from('assignments')
+        .insert([{
+          subject_id: subjectId,
+          title,
+          description,
+          due_date: dueDate,
+          file_path: filePath,
+          filename: file.name
+        }])
+        .select(`
+          *,
+          subject:subjects(name, code)
+        `)
+        .single();
+
+      if (error) throw error;
       return data;
     } catch (error) {
       console.error('Upload error:', error);
@@ -270,31 +300,96 @@ export const api = {
   },
 
   async getAssignments() {
-    const response = await fetch(`${API_BASE_URL}/teacher/assignments`);
-    return response.json();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    // Step 1: Get all subject IDs for this teacher
+    const { data: subjects, error: subjectsError } = await supabase
+      .from('subjects')
+      .select('id')
+      .eq('teacher_id', user.id);
+    if (subjectsError) throw subjectsError;
+    const subjectIds = subjects.map((s: { id: string }) => s.id);
+    if (subjectIds.length === 0) return [];
+
+    // Step 2: Get assignments for those subject IDs
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('assignments')
+      .select(`*, subject:subjects(name, code)`)
+      .in('subject_id', subjectIds);
+    if (assignmentsError) throw assignmentsError;
+    return assignments;
   },
 
   async getAssignmentsBySubject(subjectId: string) {
-    const response = await fetch(`${API_BASE_URL}/teacher/assignments/${subjectId}`);
-    return response.json();
+    const { data, error } = await supabase
+      .from('assignments')
+      .select(`
+        *,
+        subject:subjects(name, code)
+      `)
+      .eq('subject_id', subjectId);
+
+    if (error) throw error;
+    return data;
   },
 
   async deleteAssignment(assignmentId: string) {
-    const response = await fetch(`${API_BASE_URL}/teacher/assignments/${assignmentId}`, {
-      method: 'DELETE',
-    });
-    return response.json();
+    // First get the assignment to get the file path
+    const { data: assignment, error: fetchError } = await supabase
+      .from('assignments')
+      .select('file_path')
+      .eq('id', assignmentId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Delete the file from storage
+    if (assignment?.file_path) {
+      const { error: deleteFileError } = await supabase.storage
+        .from('assignments')
+        .remove([assignment.file_path]);
+
+      if (deleteFileError) throw deleteFileError;
+    }
+
+    // Delete the assignment record
+    const { error } = await supabase
+      .from('assignments')
+      .delete()
+      .eq('id', assignmentId);
+
+    if (error) throw error;
+    return { success: true };
   },
 
   // Student Assignment Views
   async getStudentAssignments() {
-    const response = await fetch(`${API_BASE_URL}/student/assignments`);
-    return response.json();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data, error } = await supabase
+      .from('assignments')
+      .select(`
+        *,
+        subject:subjects(name, code)
+      `);
+
+    if (error) throw error;
+    return data;
   },
 
   async getStudentAssignmentsBySubject(subjectId: string) {
-    const response = await fetch(`${API_BASE_URL}/student/assignments/${subjectId}`);
-    return response.json();
+    const { data, error } = await supabase
+      .from('assignments')
+      .select(`
+        *,
+        subject:subjects(name, code)
+      `)
+      .eq('subject_id', subjectId);
+
+    if (error) throw error;
+    return data;
   },
 
   // Study Materials

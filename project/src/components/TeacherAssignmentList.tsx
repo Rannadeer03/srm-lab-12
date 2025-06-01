@@ -37,7 +37,7 @@ const TeacherAssignmentList = forwardRef<TeacherAssignmentListRef>((props, ref) 
     if (window.confirm('Are you sure you want to delete this assignment?')) {
       try {
         await api.deleteAssignment(assignmentId);
-        setAssignments(assignments.filter(a => a._id !== assignmentId));
+        setAssignments(assignments.filter(a => a.id !== assignmentId));
       } catch (err) {
         console.error('Delete error:', err);
         setError('Failed to delete assignment. Please try again.');
@@ -47,7 +47,7 @@ const TeacherAssignmentList = forwardRef<TeacherAssignmentListRef>((props, ref) 
 
   // Group assignments by subject
   const groupedAssignments = assignments.reduce((acc, assignment) => {
-    const subjectKey = `${assignment.subject_name} (${assignment.subject_code})`;
+    const subjectKey = `${assignment.subject?.name || 'Unknown'} (${assignment.subject?.code || 'N/A'})`;
     if (!acc[subjectKey]) {
       acc[subjectKey] = [];
     }
@@ -88,7 +88,7 @@ const TeacherAssignmentList = forwardRef<TeacherAssignmentListRef>((props, ref) 
               <div className="space-y-4">
                 {subjectAssignments.map((assignment) => (
                   <div
-                    key={assignment._id}
+                    key={assignment.id}
                     className="flex flex-col p-4 border rounded-lg hover:bg-gray-50"
                   >
                     <div className="flex items-center justify-between mb-2">
@@ -102,14 +102,14 @@ const TeacherAssignmentList = forwardRef<TeacherAssignmentListRef>((props, ref) 
                       </div>
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => window.open(`${API_BASE_URL}/student/assignments/${assignment._id}/download`, '_blank')}
+                          onClick={() => window.open(`${API_BASE_URL}/student/assignments/${assignment.id}/download`, '_blank')}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
                           title="Download"
                         >
                           <Download className="h-5 w-5" />
                         </button>
                         <button
-                          onClick={() => handleDelete(assignment._id)}
+                          onClick={() => handleDelete(assignment.id)}
                           className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
                           title="Delete"
                         >

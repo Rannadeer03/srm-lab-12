@@ -16,6 +16,7 @@ import {
   ChevronDown,
   MessageCircle
 } from 'lucide-react';
+import { useAuthStore } from '../store/authStore';
 
 export const Header: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,6 +26,7 @@ export const Header: React.FC = () => {
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut } = useAuthStore();
   
   const isLoginPage = location.pathname === '/login';
   const isAuthenticated = ['/student-dashboard', '/teacher-dashboard'].includes(location.pathname);
@@ -49,8 +51,8 @@ export const Header: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showProfileMenu, showNotifications, showHelpMenu]);
 
-  const handleLogout = () => {
-    // Add any logout logic here
+  const handleLogout = async () => {
+    await signOut();
     navigate('/login');
   };
 
@@ -91,12 +93,14 @@ export const Header: React.FC = () => {
         active: location.pathname === '/student-dashboard'
       },
       { 
-        to: '/student-tests', 
+        to: '/student-tests',
         icon: <ClipboardList className="h-5 w-5" />, 
         text: 'Tests',
-        active: location.pathname === '/student-tests' 
+        active: location.pathname === '/student-tests',
+        onClick: () => {
+          navigate('/student-tests');
+        }
       },
-      
       { 
         to: '/results', 
         icon: <BarChart2 className="h-5 w-5" />, 
@@ -124,18 +128,33 @@ export const Header: React.FC = () => {
             {isAuthenticated && (
               <>
                 {getNavLinks().map((link) => (
-                  <Link
-                    key={link.to}
-                    to={link.to}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
-                      ${link.active 
-                        ? 'bg-indigo-50 text-indigo-700' 
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                      }`}
-                  >
-                    {link.icon}
-                    <span>{link.text}</span>
-                  </Link>
+                  link.onClick ? (
+                    <button
+                      key={link.to + link.text}
+                      onClick={link.onClick}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+                        ${link.active 
+                          ? 'bg-indigo-50 text-indigo-700' 
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                    >
+                      {link.icon}
+                      <span>{link.text}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      key={link.to + link.text}
+                      to={link.to}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
+                        ${link.active 
+                          ? 'bg-indigo-50 text-indigo-700' 
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                    >
+                      {link.icon}
+                      <span>{link.text}</span>
+                    </Link>
+                  )
                 ))}
 
                 {/* Notifications */}
@@ -186,20 +205,26 @@ export const Header: React.FC = () => {
                   {showProfileMenu && (
                     <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                       <div className="py-1">
-                        <Link
-                          to="/profile"
-                          className="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        <button
+                          onClick={() => {
+                            navigate('/profile');
+                            setShowProfileMenu(false);
+                          }}
+                          className="group flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
                           <User className="h-4 w-4 mr-3 text-gray-400 group-hover:text-gray-500" />
                           Your Profile
-                        </Link>
-                        <Link
-                          to="/settings"
-                          className="group flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        </button>
+                        <button
+                          onClick={() => {
+                            navigate('/settings');
+                            setShowProfileMenu(false);
+                          }}
+                          className="group flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                         >
                           <Settings className="h-4 w-4 mr-3 text-gray-400 group-hover:text-gray-500" />
                           Settings
-                        </Link>
+                        </button>
                         <button
                           onClick={handleLogout}
                           className="group flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50"
@@ -308,19 +333,37 @@ export const Header: React.FC = () => {
             {isAuthenticated ? (
               <>
                 {getNavLinks().map((link) => (
-                  <Link
-                    key={link.to}
-                    to={link.to}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
-                      link.active
-                        ? 'bg-indigo-50 text-indigo-700'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {link.icon}
-                    <span>{link.text}</span>
-                  </Link>
+                  link.onClick ? (
+                    <button
+                      key={link.to + link.text}
+                      onClick={() => {
+                        link.onClick?.();
+                        setIsMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
+                        link.active
+                          ? 'bg-indigo-50 text-indigo-700'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                    >
+                      {link.icon}
+                      <span>{link.text}</span>
+                    </button>
+                  ) : (
+                    <Link
+                      key={link.to + link.text}
+                      to={link.to}
+                      className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium ${
+                        link.active
+                          ? 'bg-indigo-50 text-indigo-700'
+                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      }`}
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      {link.icon}
+                      <span>{link.text}</span>
+                    </Link>
+                  )
                 ))}
                 <button
                   onClick={handleLogout}
