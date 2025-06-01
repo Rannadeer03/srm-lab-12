@@ -1,131 +1,76 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, BookOpen, CheckCircle2, XCircle } from 'lucide-react';
-import axios from 'axios';
-
-interface Question {
-  _id: string;
-  text: string;
-  options: string[];
-  correct_answer: string;
-  subject_id: string;
-  teacher_id: string;
-  created_at: string;
-}
-
-interface Test {
-  _id: string;
-  title: string;
-  description: string;
-  subject_id: string;
-  teacher_id: string;
-  questions: Question[];
-  duration: number;
-  total_marks: number;
-  created_at: string;
-  duration_minutes?: number;
-}
+import { Clock, CheckCircle2, BookOpen } from 'lucide-react';
+import { testService, testResultService, Question, Test } from '../services/supabaseApi';
+import { useAuthStore } from '../store/authStore';
 
 const JeeTestInterface: React.FC = () => {
   const { testId } = useParams<{ testId: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [test, setTest] = useState<Test | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string }>({});
   const [timeRemaining, setTimeRemaining] = useState(0);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
   const [showInstructions, setShowInstructions] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [startTime, setStartTime] = useState<Date | null>(null);
 
   useEffect(() => {
     const fetchTest = async () => {
       try {
-        setLoading(true);
-        setError(null);
-        console.log('Fetching test with ID:', testId);
-        if (!testId) {
-          setError('No test ID provided');
-          return;
-        }
-        const response = await axios.get(`http://localhost:8000/tests/${testId}`);
-        console.log('Raw test data received:', JSON.stringify(response.data, null, 2));
-        
-        if (!response.data) {
-          setError('Test data is empty');
-          return;
+        if (!testId) return;
+
+        const testData = await testService.getTest(testId);
+        if (!testData) {
+          throw new Error('Test not found');
         }
 
-        const testData = response.data as Test;
-        console.log('Questions received:', JSON.stringify(testData.questions, null, 2));
-        
-        if (!testData.questions || testData.questions.length === 0) {
-          setError('Test has no questions');
-          return;
-        }
+        const testQuestions = await testService.getTestQuestions(testId);
 
-        // Ensure all questions have the required fields
-        const validQuestions = testData.questions.filter(q => {
-          const isValid = q && q.text && q.options && Array.isArray(q.options) && q.options.length > 0 && q.correct_answer;
-          if (!isValid) {
-            console.log('Invalid question found:', JSON.stringify(q, null, 2));
-          }
-          return isValid;
-        });
-
-        console.log('Valid questions:', JSON.stringify(validQuestions, null, 2));
-
-        if (validQuestions.length === 0) {
-          setError('No valid questions found in the test');
-          return;
-        }
-
-        setTest({
-          ...testData,
-          questions: validQuestions,
-          duration: testData.duration_minutes || 60 // Default to 60 minutes if not specified
-        });
-        setTimeRemaining((testData.duration_minutes || 60) * 60); // Convert minutes to seconds
-      } catch (error: any) {
-        console.error('Error fetching test:', error);
-        if (error.response) {
-          // The request was made and the server responded with a status code
-          // that falls out of the range of 2xx
-          console.error('Error response:', error.response.data);
-          setError(`Error: ${error.response.data.detail || 'Failed to load test'}`);
-        } else if (error.request) {
-          // The request was made but no response was received
-          console.error('No response received:', error.request);
-          setError('No response from server. Please check if the backend is running.');
-        } else {
-          // Something happened in setting up the request that triggered an Error
-          console.error('Error setting up request:', error.message);
-          setError('Failed to load test. Please try again later.');
-        }
-      } finally {
+        setTest(testData);
+        setQuestions(testQuestions);
+        setTimeRemaining((testData.duration || 60) * 60);
         setLoading(false);
+      } catch (error) {
+        console.error('Error fetching test:', error);
+        navigate('/student-dashboard');
       }
     };
 
-    fetchTest();
-  }, [testId]);
+    if (testId) {
+      fetchTest();
+    }
+  }, [testId, navigate]);
 
   useEffect(() => {
-    if (timeRemaining > 0 && !isSubmitted && !showInstructions) {
+    if (timeRemaining > 0 && !showInstructions && test) {
       const timer = setInterval(() => {
-        setTimeRemaining((prev) => {
-          if (prev <= 1) {
+        setTimeRemaining((prevTime) => {
+          if (prevTime <= 1) {
             clearInterval(timer);
             handleSubmit();
             return 0;
           }
-          return prev - 1;
+          return prevTime - 1;
         });
       }, 1000);
+
+      setStartTime(new Date());
+
       return () => clearInterval(timer);
     }
-  }, [timeRemaining, isSubmitted, showInstructions]);
+  }, [timeRemaining, showInstructions, test]);
+
+  const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes
+      .toString()
+      .padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
 
   const handleAnswerSelect = (questionId: string, answer: string) => {
     setSelectedAnswers((prev) => ({
@@ -135,37 +80,56 @@ const JeeTestInterface: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!test) return;
-
-    let correctAnswers = 0;
-    test.questions.forEach((question) => {
-      if (selectedAnswers[question._id] === question.correct_answer) {
-        correctAnswers++;
-      }
-    });
-
-    const finalScore = (correctAnswers / test.questions.length) * test.total_marks;
-    setScore(finalScore);
-    setIsSubmitted(true);
+    if (!test || !user || !startTime) return;
 
     try {
-      await axios.post('/api/tests/submit', {
-        test_id: test._id,
+      // Calculate score
+      let correctAnswers = 0;
+      let totalMarks = 0;
+      let scoredMarks = 0;
+
+      questions.forEach((question) => {
+        const marks = question.marks || 4;
+        const negativeMarks = question.negative_marks || 1;
+        totalMarks += marks;
+
+        if (selectedAnswers[question.id!] === question.correct_option) {
+          correctAnswers++;
+          scoredMarks += marks;
+        } else if (selectedAnswers[question.id!]) {
+          scoredMarks -= negativeMarks;
+        }
+      });
+
+      const percentage = totalMarks > 0 ? (scoredMarks / totalMarks) * 100 : 0;
+      const timeTaken = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+
+      // Save test result
+      await testResultService.createTestResult({
+        test_id: test.id!,
+        student_id: user.id,
+        score: scoredMarks,
+        total_marks: totalMarks,
+        percentage: Math.max(0, percentage),
+        time_taken: timeTaken,
         answers: selectedAnswers,
-        score: finalScore,
+        submitted_at: new Date().toISOString()
+      });
+
+      // Navigate to results page
+      navigate('/test-results', {
+        state: {
+          score: scoredMarks,
+          total: totalMarks,
+          percentage: Math.max(0, percentage).toFixed(1),
+          testTitle: test.title,
+          timeTaken
+        }
       });
     } catch (error) {
       console.error('Error submitting test:', error);
+      alert('Error submitting test. Please try again.');
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const remainingSeconds = seconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes
-      .toString()
-      .padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
   if (loading) {
@@ -179,38 +143,14 @@ const JeeTestInterface: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (!test) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center">
-            <XCircle className="h-16 w-16 text-red-600 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Test</h2>
-            <div className="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
-              <p className="text-red-800 whitespace-pre-wrap break-words">{error}</p>
-            </div>
-            <div className="space-y-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-              >
-                Try Again
-              </button>
-              <button
-                onClick={() => navigate('/student-dashboard')}
-                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-              >
-                Return to Dashboard
-              </button>
-            </div>
-          </div>
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <p className="mt-4 text-gray-600">Test not found.</p>
         </div>
       </div>
     );
-  }
-
-  if (!test) {
-    return <div>Loading...</div>;
   }
 
   if (showInstructions) {
@@ -233,7 +173,7 @@ const JeeTestInterface: React.FC = () => {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Test Structure</h3>
                 <p className="text-gray-600">
-                  The test contains {test.questions.length} questions. Each question has multiple-choice options.
+                  The test contains {questions.length} questions. Each question has multiple-choice options.
                 </p>
               </div>
             </div>
@@ -260,33 +200,7 @@ const JeeTestInterface: React.FC = () => {
     );
   }
 
-  if (isSubmitted) {
-    return (
-      <div className="min-h-screen bg-gray-100 p-8">
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold mb-6 text-center">Test Results</h2>
-          <div className="text-center mb-8">
-            <p className="text-2xl font-semibold text-gray-800">
-              Your Score: {score.toFixed(2)}/{test.total_marks}
-            </p>
-            <p className="text-lg text-gray-600 mt-2">
-              {score >= test.total_marks * 0.6 ? 'Congratulations! You passed the test.' : 'Keep practicing to improve your score.'}
-            </p>
-          </div>
-          <div className="flex justify-center">
-            <button
-              onClick={() => navigate('/student-dashboard')}
-              className="bg-indigo-600 text-white px-6 py-3 rounded-md hover:bg-indigo-700 text-lg font-medium"
-            >
-              Return to Dashboard
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const currentQuestion = test.questions[currentQuestionIndex];
+  const currentQuestion = questions[currentQuestionIndex];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -301,14 +215,14 @@ const JeeTestInterface: React.FC = () => {
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2">
-            {test.questions.map((_, index) => (
+            {questions.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentQuestionIndex(index)}
                 className={`w-10 h-10 rounded-md flex items-center justify-center ${
                   currentQuestionIndex === index
                     ? 'bg-indigo-600 text-white'
-                    : selectedAnswers[test.questions[index]._id]
+                    : selectedAnswers[questions[index]?.id!]
                     ? 'bg-green-100 text-green-800'
                     : 'bg-gray-100 text-gray-800'
                 }`}
@@ -319,41 +233,47 @@ const JeeTestInterface: React.FC = () => {
           </div>
         </div>
 
-        {/* Question Display Panel */}
-        <div className="flex-1 p-8 overflow-y-auto">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="mb-6">
-                <h3 className="text-xl font-semibold mb-4">
-                  Question {currentQuestionIndex + 1} of {test.questions.length}
-                </h3>
-                <p className="text-gray-700 text-lg">{currentQuestion.text}</p>
+        {/* Main Question Area */}
+        <div className="flex-1 p-8">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white rounded-lg shadow-md p-8">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-semibold">
+                  Question {currentQuestionIndex + 1} of {questions.length}
+                </h2>
+                <span className="text-sm text-gray-500">
+                  Marks: {questions[currentQuestionIndex]?.marks || 4}
+                </span>
               </div>
 
-              <div className="space-y-4">
-                {currentQuestion.options.map((option, index) => (
-                  <label
-                    key={index}
-                    className={`flex items-center p-4 border rounded-lg cursor-pointer transition-colors ${
-                      selectedAnswers[currentQuestion._id] === option
-                        ? 'border-indigo-600 bg-indigo-50'
-                        : 'border-gray-200 hover:border-indigo-300'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name={`question-${currentQuestion._id}`}
-                      value={option}
-                      checked={selectedAnswers[currentQuestion._id] === option}
-                      onChange={() => handleAnswerSelect(currentQuestion._id, option)}
-                      className="mr-4 h-5 w-5 text-indigo-600"
-                    />
-                    <span className="text-gray-700">{option}</span>
-                  </label>
-                ))}
+              <div className="mb-8">
+                <h3 className="text-lg mb-6">{questions[currentQuestionIndex]?.question_text}</h3>
+                <div className="space-y-3">
+                  {questions[currentQuestionIndex]?.options.map((option, index) => (
+                    <label
+                      key={index}
+                      className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="radio"
+                        name={`question-${questions[currentQuestionIndex]?.id}`}
+                        value={option}
+                        checked={selectedAnswers[questions[currentQuestionIndex]?.id!] === option}
+                        onChange={(e) =>
+                          setSelectedAnswers((prev) => ({
+                            ...prev,
+                            [questions[currentQuestionIndex]?.id!]: e.target.value
+                          }))
+                        }
+                        className="mr-3"
+                      />
+                      <span>{option}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              <div className="flex justify-between mt-8">
+              <div className="flex justify-between">
                 <button
                   onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
                   disabled={currentQuestionIndex === 0}
@@ -361,7 +281,7 @@ const JeeTestInterface: React.FC = () => {
                 >
                   Previous
                 </button>
-                {currentQuestionIndex === test.questions.length - 1 ? (
+                {currentQuestionIndex === questions.length - 1 ? (
                   <button
                     onClick={handleSubmit}
                     className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700"
@@ -372,7 +292,7 @@ const JeeTestInterface: React.FC = () => {
                   <button
                     onClick={() =>
                       setCurrentQuestionIndex((prev) =>
-                        Math.min(test.questions.length - 1, prev + 1)
+                        Math.min(questions.length - 1, prev + 1)
                       )
                     }
                     className="bg-indigo-600 text-white px-6 py-2 rounded-md hover:bg-indigo-700"
@@ -389,4 +309,4 @@ const JeeTestInterface: React.FC = () => {
   );
 };
 
-export default JeeTestInterface; 
+export default JeeTestInterface;

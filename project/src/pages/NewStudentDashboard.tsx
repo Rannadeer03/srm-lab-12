@@ -47,10 +47,10 @@ export const NewStudentDashboard: React.FC = () => {
           axios.get<Test[]>('http://localhost:8000/tests'),
           axios.get<Subject[]>('http://localhost:8000/teacher/subjects')
         ]);
-        
+
         console.log('Tests Response:', testsResponse.data);
         console.log('Subjects Response:', subjectsResponse.data);
-        
+
         // Ensure we have valid test IDs
         const validTests = testsResponse.data.filter(test => test._id);
         setAvailableTests(validTests);
@@ -178,7 +178,7 @@ export const NewStudentDashboard: React.FC = () => {
           </div>
         ) : (
           <>
-          
+
             {/* Quick Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
               <div className="bg-white rounded-lg shadow-sm p-6 text-center">
@@ -217,7 +217,7 @@ export const NewStudentDashboard: React.FC = () => {
                     className="absolute inset-0 bg-cover bg-center opacity-20 group-hover:opacity-30 transition-opacity duration-200"
                     style={{ backgroundImage: `url(${item.image})` }}
                   />
-                  
+
                   {/* Content */}
                   <div className="relative p-6">
                     <div className={`inline-flex items-center justify-center p-3 rounded-lg ${item.color} text-white mb-4`}>
@@ -311,4 +311,4 @@ export const NewStudentDashboard: React.FC = () => {
       </div>
     </div>
   );
-}; 
+};

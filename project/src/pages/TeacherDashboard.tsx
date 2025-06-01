@@ -20,6 +20,8 @@ import {
   PenTool
 } from 'lucide-react';
 import { api } from '../services/api';
+import { testService, Test } from '../services/supabaseApi';
+import { useAuthStore } from '../store/authStore';
 
 const mockTests = [
   {
@@ -95,7 +97,8 @@ const recentActivity = [
 export const TeacherDashboard: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [tests, setTests] = useState(mockTests);
+  const { user } = useAuthStore();
+  const [tests, setTests] = useState<Test[]>([]);
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -103,6 +106,7 @@ export const TeacherDashboard: React.FC = () => {
   const [showEditTestModal, setShowEditTestModal] = useState(false);
   const [selectedTest, setSelectedTest] = useState<any>(null);
   const [recentActivities] = useState(recentActivity);
+  const [loading, setLoading] = useState(true);
 
   const menuItems = [
     {
@@ -201,6 +205,23 @@ export const TeacherDashboard: React.FC = () => {
     };
     fetchSubjects();
   }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        if (!user) return;
+
+        const teacherTests = await testService.getTestsByTeacher(user.id);
+        setTests(teacherTests);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
 
   const filteredTests = tests.filter((test) => {
     const matchesSearch = test.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -312,7 +333,7 @@ export const TeacherDashboard: React.FC = () => {
                 className="absolute inset-0 bg-cover bg-center opacity-20 group-hover:opacity-30 transition-opacity duration-200"
                 style={{ backgroundImage: `url(${item.image})` }}
               />
-              
+
               {/* Content */}
               <div className="relative p-6">
                 <div className={`inline-flex items-center justify-center p-3 rounded-lg ${item.color} text-white mb-4`}>
