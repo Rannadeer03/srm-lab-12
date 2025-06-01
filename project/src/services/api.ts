@@ -11,13 +11,8 @@ interface ProfileData {
 }
 
 // Types
-export interface Question {
-  teacher_id: number;
-  subject_id: string;
-  question_text: string;
-  options: string[];
-  correct_option: string;
-}
+// Re-export from supabaseApi for consistency
+export type Question = SupabaseQuestion;
 
 export interface Subject {
   _id: string;
@@ -254,7 +249,7 @@ export const api = {
     formData.append('description', description);
     formData.append('due_date', dueDate);
     formData.append('file', file);
-    
+
     try {
       const response = await fetch(`${API_BASE_URL}/teacher/assignments`, {
         method: 'POST',
@@ -318,7 +313,7 @@ export const api = {
     const formData = new FormData();
     formData.append('subject', subject);
     formData.append('file', file);
-    
+
     const response = await fetch(`${API_BASE_URL}/teacher/study-material/upload`, {
       method: 'POST',
       body: formData,
@@ -355,7 +350,7 @@ export const api = {
       'video/mp4',
       'video/webm'
     ];
-    
+
     if (!allowedTypes.includes(file.type)) {
       throw new Error('Only PDF, Word, PowerPoint, and video files are allowed');
     }

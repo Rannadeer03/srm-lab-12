@@ -155,13 +155,13 @@ const CreateTest: React.FC = () => {
       };
 
       console.log('Submitting test data:', testData);
-      
+
       const response = await axios.post('http://localhost:8000/tests', testData, {
         headers: {
           'Content-Type': 'application/json',
         },
       });
-      
+
       if (response.status === 200) {
         alert('Test created successfully!');
         navigate('/teacher-dashboard');
@@ -183,7 +183,7 @@ const CreateTest: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-md p-6">
           <h1 className="text-2xl font-bold mb-6">Create New Test</h1>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -196,7 +196,7 @@ const CreateTest: React.FC = () => {
                   required
                   />
                 </div>
-              
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Subject</label>
                   {loading ? (
@@ -217,7 +217,7 @@ const CreateTest: React.FC = () => {
                   </select>
                   )}
                 </div>
-              
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Duration (minutes)</label>
                   <input
@@ -278,7 +278,7 @@ const CreateTest: React.FC = () => {
                         required
                       />
                     </div>
-                    
+
                         <div>
                       <label className="block text-sm font-medium text-gray-700">Question Image (Optional)</label>
                       <div className="mt-1 flex items-center">
@@ -297,7 +297,7 @@ const CreateTest: React.FC = () => {
                         </label>
                       </div>
                     </div>
-                    
+
                     <div className="space-y-2">
                       <label className="block text-sm font-medium text-gray-700">Options</label>
                       {question.options.map((option, optionIndex) => (
@@ -348,7 +348,7 @@ const CreateTest: React.FC = () => {
                   </div>
                 </div>
               ))}
-              
+
                             <button
                 type="button"
                 onClick={handleAddQuestion}
@@ -358,7 +358,7 @@ const CreateTest: React.FC = () => {
                 Add Question
                             </button>
                           </div>
-            
+
             <div className="flex justify-end">
                       <button
                 type="submit"
@@ -375,4 +375,4 @@ const CreateTest: React.FC = () => {
   );
   };
 
-export default CreateTest; 
+export default CreateTest;
