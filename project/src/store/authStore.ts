@@ -69,7 +69,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
@@ -197,14 +201,73 @@ export const useAuthStore = create<AuthState>((set) => ({
           .eq('id', session.user.id)
           .single();
 
-        if (profileError) throw profileError;
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
 
-        set({ 
-          user: session.user,
-          profile,
-          error: null
-        });
+        if (profile) {
+          set({ 
+            user: session.user,
+            profile,
+            error: null
+          });
+        } else {
+          // User exists but no profile, create one for Google OAuth users
+          if (session.user.app_metadata.provider === 'google') {
+            const newProfile = {
+              id: session.user.id,
+              name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+              email: session.user.email!,
+              role: 'student' as const,
+              auth_provider: 'google' as const,
+              requires_password_change: false
+            };
+
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert([newProfile]);
+
+            if (insertError) throw insertError;
+
+            set({ 
+              user: session.user,
+              profile: newProfile,
+              error: null
+            });
+          } else {
+            set({ 
+              user: session.user,
+              profile: null,
+              error: null
+            });
+          }
+        }
       }
+
+      // Listen for auth state changes
+      supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          // Get user profile
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          set({ 
+            user: session.user,
+            profile,
+            error: null
+          });
+        } else if (event === 'SIGNED_OUT') {
+          set({ 
+            user: null,
+            profile: null,
+            error: null
+          });
+        }
+      });
+
     } catch (error: any) {
       console.error('Error initializing auth:', error);
       set({ 

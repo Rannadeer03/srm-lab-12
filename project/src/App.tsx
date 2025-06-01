@@ -16,6 +16,7 @@ import StudentAssignmentView from "./components/StudentAssignmentView";
 import CreateTest from './pages/CreateTest';
 import JeeTestInterface from './pages/JeeTestInterface';
 import { Register } from './pages/Register';
+import { AuthCallback } from './pages/AuthCallback';
 import { AdminDashboard } from './pages/AdminDashboard';
 
 const App: React.FC = () => {
@@ -46,6 +47,7 @@ const App: React.FC = () => {
             <Route path="/teacher/create-test" element={<CreateTest />} />
             <Route path="/tests/:testId" element={<JeeTestInterface />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
           </Routes>
         </main>
