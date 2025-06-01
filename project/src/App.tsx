@@ -15,6 +15,8 @@ import TeacherCourseUpload from "./components/TeacherCourseUpload";
 import StudentAssignmentView from "./components/StudentAssignmentView";
 import CreateTest from './pages/CreateTest';
 import JeeTestInterface from './pages/JeeTestInterface';
+import { Register } from './pages/Register';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -43,6 +45,8 @@ const App: React.FC = () => {
             <Route path="/student/assignments" element={<StudentAssignmentView />} />
             <Route path="/teacher/create-test" element={<CreateTest />} />
             <Route path="/tests/:testId" element={<JeeTestInterface />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
           </Routes>
         </main>
         <Footer />

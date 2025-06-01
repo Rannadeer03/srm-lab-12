@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   name text NOT NULL,
   email text NOT NULL,
-  role text NOT NULL CHECK (role IN ('student', 'teacher')),
+  role text NOT NULL CHECK (role IN ('student', 'teacher', 'admin')),
   registration_number text UNIQUE,
   faculty_id text UNIQUE,
   department text,
