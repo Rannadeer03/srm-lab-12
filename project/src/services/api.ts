@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { API_BASE_URL } from '../config';
+import { Question } from './supabaseApi';
 
 interface ProfileData {
   name: string;
@@ -12,7 +13,7 @@ interface ProfileData {
 
 // Types
 // Re-export from supabaseApi for consistency
-export type Question = SupabaseQuestion;
+
 
 export interface Subject {
   id: string;
@@ -46,7 +47,7 @@ export interface StudyMaterial {
 }
 
 export interface CourseMaterial {
-  _id: string;
+  id: string;
   subject_id: string;
   title: string;
   description: string;
@@ -456,25 +457,51 @@ export const api = {
       throw new Error('File size should not exceed 100MB');
     }
 
-    const formData = new FormData();
-    formData.append('subject_id', subject_id);
-    formData.append('title', title);
-    formData.append('description', description);
-    formData.append('material_type', materialType);
-    formData.append('file', file);
-
     try {
-      const response = await fetch(`${API_BASE_URL}/teacher/course-material`, {
-        method: 'POST',
-        body: formData,
-      });
+      // Get subject details
+      const { data: subject, error: subjectError } = await supabase
+        .from('subjects')
+        .select('name, code')
+        .eq('id', subject_id)
+        .single();
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Failed to upload course material' }));
-        throw new Error(errorData.detail || 'Failed to upload course material');
-      }
+      if (subjectError) throw subjectError;
 
-      return response.json();
+      // Upload file to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `course-materials/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('course-materials')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Create course material record
+      const { data: material, error: insertError } = await supabase
+        .from('course-materials')
+        .insert([{
+          subject_id,
+          title,
+          description,
+          material_type: materialType,
+          filename: file.name,
+          stored_filename: fileName,
+          path: filePath,
+          subject_name: subject.name,
+          subject_code: subject.code,
+          file_type: file.type
+        }])
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      return material;
     } catch (error) {
       console.error('Upload error:', error);
       throw error instanceof Error ? error : new Error('Failed to upload course material');
@@ -482,27 +509,60 @@ export const api = {
   },
 
   async getCourseMaterialsBySubject(subject_id: string): Promise<CourseMaterial[]> {
-    const response = await fetch(`${API_BASE_URL}/teacher/course-material/${subject_id}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch course materials');
-    }
-    return response.json();
+    const { data, error } = await supabase
+      .from('course_materials')
+      .select('*')
+      .eq('subject_id', subject_id);
+
+    if (error) throw error;
+    return data;
   },
 
   async downloadCourseMaterial(materialPath: string): Promise<Blob> {
-    const response = await fetch(`${API_BASE_URL}/materials/${materialPath}`);
-    if (!response.ok) {
-      throw new Error('Failed to download material');
-    }
-    return response.blob();
+    const { data, error } = await supabase.storage
+      .from('course-materials')
+      .download(materialPath);
+
+    if (error) throw error;
+    return data;
   },
 
   async getStudentCourseMaterials(subject_id: string): Promise<CourseMaterial[]> {
-    const response = await fetch(`${API_BASE_URL}/student/course-material/${subject_id}`);
-    if (!response.ok) {
-      throw new Error('Failed to fetch course materials');
+    const { data, error } = await supabase
+      .from('course_materials')
+      .select('*')
+      .eq('subject_id', subject_id);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deleteCourseMaterial(materialId: string): Promise<void> {
+    // First get the material to get the file path
+    const { data: material, error: fetchError } = await supabase
+      .from('course_materials')
+      .select('path')
+      .eq('id', materialId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    // Delete the file from storage
+    if (material?.path) {
+      const { error: deleteFileError } = await supabase.storage
+        .from('course-materials')
+        .remove([material.path]);
+
+      if (deleteFileError) throw deleteFileError;
     }
-    return response.json();
+
+    // Delete the material record
+    const { error } = await supabase
+      .from('course_materials')
+      .delete()
+      .eq('id', materialId);
+
+    if (error) throw error;
   },
 
   async createTest(testData: Omit<Test, 'id'>): Promise<Test> {
