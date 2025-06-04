@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { Download, Eye, FileText } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import type { CourseMaterial, Subject } from '../services/api';
 import { api } from '../services/api';
-import type { Subject, CourseMaterial } from '../services/api';
-import { FileText, Download, Eye } from 'lucide-react';
 
 const TeacherCourseUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -21,16 +21,18 @@ const TeacherCourseUpload: React.FC = () => {
       try {
         setIsLoading(true);
         setError('');
-        
+
         // Fetch subjects
         const dbSubjects = await api.getSubjects();
         if (dbSubjects && dbSubjects.length > 0) {
           setSubjects(dbSubjects);
-          
+
           // Fetch materials for each subject
           const allMaterials: CourseMaterial[] = [];
           for (const subject of dbSubjects) {
-            const subjectMaterials = await api.getCourseMaterialsBySubject(subject._id);
+            const subjectMaterials = await api.getCourseMaterialsBySubject(
+              subject._id
+            );
             allMaterials.push(...subjectMaterials);
           }
           setMaterials(allMaterials);
@@ -52,20 +54,22 @@ const TeacherCourseUpload: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      
+
       // Validate file type
       const allowedTypes = [
-        'application/pdf', 
-        'application/msword', 
+        'application/pdf',
+        'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-powerpoint',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
         'video/mp4',
-        'video/webm'
+        'video/webm',
       ];
-      
+
       if (!allowedTypes.includes(selectedFile.type)) {
-        setError('Only PDF, Word, PowerPoint, and video files (MP4, WebM) are allowed');
+        setError(
+          'Only PDF, Word, PowerPoint, and video files (MP4, WebM) are allowed'
+        );
         e.target.value = '';
         return;
       }
@@ -112,7 +116,7 @@ const TeacherCourseUpload: React.FC = () => {
     try {
       setError('');
       setMessage('Uploading course material...');
-      
+
       const response = await api.uploadCourseMaterial(
         selectedSubject,
         title,
@@ -123,24 +127,29 @@ const TeacherCourseUpload: React.FC = () => {
 
       console.log('Upload successful:', response);
       setMessage('Course material uploaded successfully!');
-      
+
       // Add the new material to the list
-      setMaterials(prevMaterials => [...prevMaterials, response]);
-      
+      setMaterials((prevMaterials) => [...prevMaterials, response]);
+
       // Reset form
       setFile(null);
       setTitle('');
       setDescription('');
       setMaterialType('');
       setSelectedSubject('');
-      
+
       // Reset file input
-      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const fileInput = document.querySelector(
+        'input[type="file"]'
+      ) as HTMLInputElement;
       if (fileInput) fileInput.value = '';
-      
     } catch (err) {
       console.error('Upload error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to upload course material. Please try again.');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to upload course material. Please try again.'
+      );
       setMessage('');
     }
   };
@@ -163,7 +172,7 @@ const TeacherCourseUpload: React.FC = () => {
       {/* Upload Form */}
       <div className="p-6 bg-white rounded-lg shadow-md mb-8">
         <h2 className="text-2xl font-bold mb-4">Upload Course Material</h2>
-        
+
         <div className="space-y-4">
           {/* Subject Selection */}
           <div>
@@ -180,7 +189,7 @@ const TeacherCourseUpload: React.FC = () => {
               >
                 <option value="">Select a subject</option>
                 {subjects.map((subject) => (
-                  <option key={subject._id} value={subject._id}>
+                  <option key={subject.id} value={subject.id}>
                     {subject.name} ({subject.code})
                   </option>
                 ))}
@@ -253,21 +262,29 @@ const TeacherCourseUpload: React.FC = () => {
             />
           </div>
 
-          {error && (
-            <div className="text-red-500 text-sm">{error}</div>
-          )}
+          {error && <div className="text-red-500 text-sm">{error}</div>}
 
-          {message && (
-            <div className="text-green-500 text-sm">{message}</div>
-          )}
+          {message && <div className="text-green-500 text-sm">{message}</div>}
 
           <button
             onClick={handleUpload}
-            disabled={!file || !selectedSubject || !title.trim() || !description.trim() || !materialType}
+            disabled={
+              !file ||
+              !selectedSubject ||
+              !title.trim() ||
+              !description.trim() ||
+              !materialType
+            }
             className={`px-4 py-2 rounded-md text-white font-medium
-              ${file && selectedSubject && title.trim() && description.trim() && materialType
-                ? 'bg-blue-600 hover:bg-blue-700' 
-                : 'bg-gray-400 cursor-not-allowed'}`}
+              ${
+                file &&
+                selectedSubject &&
+                title.trim() &&
+                description.trim() &&
+                materialType
+                  ? 'bg-blue-600 hover:bg-blue-700'
+                  : 'bg-gray-400 cursor-not-allowed'
+              }`}
           >
             Upload Material
           </button>
@@ -277,16 +294,20 @@ const TeacherCourseUpload: React.FC = () => {
       {/* Uploaded Materials List */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-xl font-semibold mb-4">Uploaded Materials</h2>
-        
+
         {materials.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">No materials uploaded yet.</p>
+          <p className="text-gray-500 text-center py-4">
+            No materials uploaded yet.
+          </p>
         ) : (
           <div className="space-y-4">
             {materials.map((material) => {
-              const subject = subjects.find(s => s._id === material.subject_id);
+              const subject = subjects.find(
+                (s) => s.id === material.subject_id
+              );
               return (
                 <div
-                  key={material._id}
+                  key={material.id}
                   className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
                 >
                   <div className="flex items-start space-x-3">
@@ -294,8 +315,12 @@ const TeacherCourseUpload: React.FC = () => {
                       <FileText className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">{material.title}</h3>
-                      <p className="text-sm text-gray-500">{material.description}</p>
+                      <h3 className="font-medium text-gray-900">
+                        {material.title}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        {material.description}
+                      </p>
                       <div className="flex items-center space-x-2 mt-1">
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
                           {subject?.name} ({subject?.code})
@@ -332,4 +357,4 @@ const TeacherCourseUpload: React.FC = () => {
   );
 };
 
-export default TeacherCourseUpload; 
+export default TeacherCourseUpload;

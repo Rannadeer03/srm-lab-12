@@ -1,24 +1,35 @@
-import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
-import { Header } from "./components/Header";
-import { Footer } from "./components/Footer";
-import SplashScreen from "./components/splashScreen";
-import { Login } from "./pages/Login";
-import { TeacherDashboard } from "./pages/TeacherDashboard";
-import { NewStudentDashboard } from './pages/NewStudentDashboard';
-import { StudyMaterials } from './pages/StudyMaterials';
-import Home from "./pages/Home";
-import { CreateProfile } from './pages/CreateProfile';
-import TeacherAssignmentUpload from "./components/TeacherAssignmentUpload";
-import TeacherCourseUpload from "./components/TeacherCourseUpload";
-import StudentAssignmentView from "./components/StudentAssignmentView";
-import CreateTest from './pages/CreateTest';
-import JeeTestInterface from './pages/JeeTestInterface';
-import { Register } from './pages/Register';
-import { AuthCallback } from './pages/AuthCallback';
+import { Footer } from './components/Footer';
+import { Header } from './components/Header';
+import StudentAssignmentView from './components/StudentAssignmentView';
+import TeacherAssignmentUpload from './components/TeacherAssignmentUpload';
+import TeacherCourseUpload from './components/TeacherCourseUpload';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { AuthCallback } from './pages/AuthCallback';
+import { CreateProfile } from './pages/CreateProfile';
+import CreateTest from './pages/CreateTest';
+import Home from './pages/Home';
+import JeeTestInterface from './pages/JeeTestInterface';
+import { Login } from './pages/Login';
+import { NewStudentDashboard } from './pages/NewStudentDashboard';
 import { Profile } from './pages/Profile';
+import { Register } from './pages/Register';
+import { StudyMaterials } from './pages/StudyMaterials';
+import { TeacherDashboard } from './pages/TeacherDashboard';
+import { useAuthStore } from './store/authStore';
+
+// Protected route component
+const RequireAuth = ({ children }: { children: JSX.Element }) => {
+  const { profile } = useAuthStore();
+  const location = useLocation();
+
+  if (!profile) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  return children;
+};
 
 // Simple loading screen component
 const LoadingScreen = () => (
@@ -29,43 +40,129 @@ const LoadingScreen = () => (
 
 const App: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
+  const { initialize } = useAuthStore();
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 3000);
-    return () => clearTimeout(timer);
+    const loadSession = async () => {
+      try {
+        await initialize();
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSession();
   }, []);
 
   if (loading) return <LoadingScreen />;
 
   return (
-    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-grow">
-          <Routes>
-            <Route path="/" element={<SplashScreen />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/create-profile" element={<CreateProfile />} />
-            <Route path="/student-dashboard" element={<NewStudentDashboard />} />
-            <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/study-materials" element={<StudyMaterials />} />
-            <Route path="/teacher/assignments" element={<TeacherAssignmentUpload />} />
-            <Route path="/teacher/course-materials" element={<TeacherCourseUpload />} />
-            <Route path="/student/assignments" element={<StudentAssignmentView />} />
-            <Route path="/teacher/create-test" element={<CreateTest />} />
-            <Route path="/tests/:testId" element={<JeeTestInterface />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/profile" element={<Profile />} />
-            {/* Catch all route - redirect to home */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-    </BrowserRouter>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-grow">
+        <Routes>
+          <Route path="/home" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+
+          {/* Protected Routes */}
+          <Route
+            path="/create-profile"
+            element={
+              <RequireAuth>
+                <CreateProfile />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/student-dashboard"
+            element={
+              <RequireAuth>
+                <NewStudentDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/teacher-dashboard"
+            element={
+              <RequireAuth>
+                <TeacherDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <RequireAuth>
+                <AdminDashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/study-materials"
+            element={
+              <RequireAuth>
+                <StudyMaterials />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/teacher/assignments"
+            element={
+              <RequireAuth>
+                <TeacherAssignmentUpload />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/teacher/course-materials"
+            element={
+              <RequireAuth>
+                <TeacherCourseUpload />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/student/assignments"
+            element={
+              <RequireAuth>
+                <StudentAssignmentView />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/teacher/create-test"
+            element={
+              <RequireAuth>
+                <CreateTest />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/tests/:testId"
+            element={
+              <RequireAuth>
+                <JeeTestInterface />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <RequireAuth>
+                <Profile />
+              </RequireAuth>
+            }
+          />
+
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/home" replace />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
   );
 };
 

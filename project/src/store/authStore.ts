@@ -1,6 +1,6 @@
+import { User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
-import { User } from '@supabase/supabase-js';
 
 interface Profile {
   id: string;
@@ -27,8 +27,13 @@ interface AuthState {
   setError: (error: string | null) => void;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
-  signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  registerUser: (userData: RegisterData) => Promise<{ success: boolean; message: string }>;
+  signInWithEmail: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  registerUser: (
+    userData: RegisterData
+  ) => Promise<{ success: boolean; message: string }>;
 }
 
 interface RegisterData {
@@ -66,16 +71,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   signInWithEmail: async (email: string, password: string) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       // First, sign in to get the session
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
       if (authError) {
         if (authError.message === 'Email not confirmed') {
-          throw new Error('Please check your email and click the confirmation link before signing in. If you haven\'t received the email, check your spam folder or try registering again.');
+          throw new Error(
+            "Please check your email and click the confirmation link before signing in. If you haven't received the email, check your spam folder or try registering again."
+          );
         }
         if (authError.message === 'Invalid login credentials') {
           throw new Error('Invalid email or password. Please try again.');
@@ -90,22 +98,29 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.log('User authenticated successfully:', authData.user.id);
 
       // Get the current session to ensure we have a valid token
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
       if (sessionError) {
         console.error('Session error:', sessionError);
-        throw new Error('Failed to get authentication session. Please try again.');
+        throw new Error(
+          'Failed to get authentication session. Please try again.'
+        );
       }
 
       if (!session) {
-        throw new Error('No active session found. Please try logging in again.');
+        throw new Error(
+          'No active session found. Please try logging in again.'
+        );
       }
 
       console.log('Session obtained successfully');
 
       // Fetch the user's profile with retry logic
       let profile = null;
-      let profileError = null;
+      let profileError;
       let retryCount = 0;
       const maxRetries = 3;
 
@@ -118,13 +133,16 @@ export const useAuthStore = create<AuthState>((set) => ({
             .single();
 
           if (fetchError) {
-            console.error(`Profile fetch attempt ${retryCount + 1} failed:`, fetchError);
+            console.error(
+              `Profile fetch attempt ${retryCount + 1} failed:`,
+              fetchError
+            );
             profileError = fetchError;
             retryCount++;
-            
+
             if (retryCount < maxRetries) {
               // Wait for 1 second before retrying
-              await new Promise(resolve => setTimeout(resolve, 1000));
+              await new Promise((resolve) => setTimeout(resolve, 1000));
               continue;
             }
           } else {
@@ -132,10 +150,13 @@ export const useAuthStore = create<AuthState>((set) => ({
             break;
           }
         } catch (error) {
-          console.error(`Profile fetch attempt ${retryCount + 1} failed with error:`, error);
+          console.error(
+            `Profile fetch attempt ${retryCount + 1} failed with error:`,
+            error
+          );
           retryCount++;
           if (retryCount < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           }
         }
@@ -143,31 +164,37 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       if (!profile) {
         console.error('Failed to fetch profile after retries:', profileError);
-        
+
         // Try to create the profile if it doesn't exist
         try {
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
-            .insert([{
-              id: authData.user.id,
-              email: authData.user.email,
-              name: authData.user.user_metadata?.name || 'User',
-              role: authData.user.user_metadata?.role || 'student',
-              auth_provider: 'email',
-              requires_password_change: false
-            }])
+            .insert([
+              {
+                id: authData.user.id,
+                email: authData.user.email,
+                name: authData.user.user_metadata?.name || 'User',
+                role: authData.user.user_metadata?.role || 'student',
+                auth_provider: 'email',
+                requires_password_change: false,
+              },
+            ])
             .select()
             .single();
 
           if (createError) {
             console.error('Failed to create profile:', createError);
-            throw new Error('Failed to create user profile. Please try registering again.');
+            throw new Error(
+              'Failed to create user profile. Please try registering again.'
+            );
           }
 
           profile = newProfile;
         } catch (error) {
           console.error('Profile creation error:', error);
-          throw new Error('Failed to create user profile. Please try registering again.');
+          throw new Error(
+            'Failed to create user profile. Please try registering again.'
+          );
         }
       }
 
@@ -193,10 +220,16 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ isLoading: true, error: null });
 
       // Validate verification codes for special roles
-      if (userData.role === 'teacher' && userData.verification_code !== 'TEACHER2024') {
+      if (
+        userData.role === 'teacher' &&
+        userData.verification_code !== 'TEACHER2024'
+      ) {
         throw new Error('Invalid teacher verification code');
       }
-      if (userData.role === 'admin' && userData.verification_code !== 'ADMIN2024') {
+      if (
+        userData.role === 'admin' &&
+        userData.verification_code !== 'ADMIN2024'
+      ) {
         throw new Error('Invalid admin verification code');
       }
 
@@ -209,10 +242,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         options: {
           data: {
             name: userData.name,
-            role: userData.role
+            role: userData.role,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
 
       if (error) {
@@ -230,7 +263,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           email: userData.email,
           role: userData.role,
           auth_provider: 'email',
-          requires_password_change: false
+          requires_password_change: false,
         };
 
         if (userData.role === 'student' && userData.registration_number) {
@@ -259,49 +292,52 @@ export const useAuthStore = create<AuthState>((set) => ({
         console.log('Auth settings:', authSettings);
 
         // Try to sign in immediately after registration
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: userData.email,
-          password: userData.password,
-        });
+        const { data: signInData, error: signInError } =
+          await supabase.auth.signInWithPassword({
+            email: userData.email,
+            password: userData.password,
+          });
 
         if (signInError) {
           console.log('Sign in failed after registration:', signInError);
           // If sign in fails (likely due to email not confirmed), just return success
-          set({ 
+          set({
             user: data.user,
             profile: profileData,
-            error: null
+            error: null,
           });
 
           return {
             success: true,
-            message: 'Registration successful! Please check your email (including spam folder) for the confirmation link. If you don\'t receive it within a few minutes, please try registering again.'
+            message:
+              "Registration successful! Please check your email (including spam folder) for the confirmation link. If you don't receive it within a few minutes, please try registering again.",
           };
         }
 
         // If sign in succeeds, set the user and profile
-        set({ 
+        set({
           user: signInData.user,
           profile: profileData,
-          error: null
+          error: null,
         });
 
         return {
           success: true,
-          message: 'Registration successful! You have been automatically signed in.'
+          message:
+            'Registration successful! You have been automatically signed in.',
         };
       }
 
       return {
         success: false,
-        message: 'Registration failed. Please try again.'
+        message: 'Registration failed. Please try again.',
       };
     } catch (error: any) {
       console.error('Registration error:', error);
       set({ error: error.message || 'Error registering user' });
       return {
         success: false,
-        message: error.message || 'Error registering user'
+        message: error.message || 'Error registering user',
       };
     } finally {
       set({ isLoading: false });
@@ -310,9 +346,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialize: async () => {
     try {
       set({ isLoading: true, error: null });
-      
+
       // Check current session
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
 
       if (session?.user) {
@@ -328,16 +367,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
 
         if (profile) {
-          set({ 
+          set({
             user: session.user,
             profile,
-            error: null
+            error: null,
           });
         } else {
-          set({ 
+          set({
             user: session.user,
             profile: null,
-            error: null
+            error: null,
           });
         }
       }
@@ -347,5 +386,5 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       set({ isLoading: false });
     }
-  }
+  },
 }));

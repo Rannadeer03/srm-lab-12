@@ -1,13 +1,14 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import Particles from "react-tsparticles";
-import { loadFull } from "tsparticles";
-import { GraduationCap, Book, Shield } from "lucide-react";
-import useSound from "use-sound";
+import { motion } from 'framer-motion';
+import { Book, GraduationCap, Shield } from 'lucide-react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import Particles from 'react-tsparticles';
+import { loadFull } from 'tsparticles';
+import useSound from 'use-sound';
 
 // Using a CDN-hosted sound file instead of local file
-const WHOOSH_SOUND_URL = "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3";
+const WHOOSH_SOUND_URL =
+  'https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3';
 
 // Particle Background Component
 const ParticleBackground = () => {
@@ -20,11 +21,11 @@ const ParticleBackground = () => {
       id="tsparticles"
       init={particlesInit}
       options={{
-        background: { color: { value: "transparent" } },
+        background: { color: { value: 'transparent' } },
         particles: {
           number: { value: 80 },
-          shape: { type: "circle" },
-          color: { value: "#ffffff" },
+          shape: { type: 'circle' },
+          color: { value: '#ffffff' },
           opacity: { value: 0.5 },
           size: { value: 4 },
           move: {
@@ -35,7 +36,7 @@ const ParticleBackground = () => {
         },
         interactivity: {
           events: {
-            onhover: { enable: true, mode: "repulse" },
+            onhover: { enable: true, mode: 'repulse' },
           },
         },
       }}
@@ -45,12 +46,12 @@ const ParticleBackground = () => {
 
 // Icon Morphing Component
 const IconMorph = () => {
-  const [icon, setIcon] = useState("cap");
+  const [icon, setIcon] = useState('cap');
 
   useEffect(() => {
     const interval = setInterval(() => {
       setIcon((prev) =>
-        prev === "cap" ? "book" : prev === "book" ? "shield" : "cap"
+        prev === 'cap' ? 'book' : prev === 'book' ? 'shield' : 'cap'
       );
     }, 3000);
     return () => clearInterval(interval);
@@ -65,16 +66,20 @@ const IconMorph = () => {
       transition={{ duration: 0.5 }}
       className="inline-block mb-8"
     >
-      {icon === "cap" && <GraduationCap className="w-24 h-24 text-white holographic" />}
-      {icon === "book" && <Book className="w-24 h-24 text-white holographic" />}
-      {icon === "shield" && <Shield className="w-24 h-24 text-white holographic" />}
+      {icon === 'cap' && (
+        <GraduationCap className="w-24 h-24 text-white holographic" />
+      )}
+      {icon === 'book' && <Book className="w-24 h-24 text-white holographic" />}
+      {icon === 'shield' && (
+        <Shield className="w-24 h-24 text-white holographic" />
+      )}
     </motion.div>
   );
 };
 
 // Typewriter Effect Component
 const Typewriter = ({ text }: { text: string }) => {
-  const [displayText, setDisplayText] = useState("");
+  const [displayText, setDisplayText] = useState('');
 
   useEffect(() => {
     let i = 0;
@@ -97,8 +102,8 @@ const CustomCursor = () => {
     const moveCursor = (e: MouseEvent) => {
       setPosition({ x: e.clientX, y: e.clientY });
     };
-    window.addEventListener("mousemove", moveCursor);
-    return () => window.removeEventListener("mousemove", moveCursor);
+    window.addEventListener('mousemove', moveCursor);
+    return () => window.removeEventListener('mousemove', moveCursor);
   }, []);
 
   return (
@@ -132,20 +137,20 @@ const SplashScreen: React.FC = () => {
   const [themeIndex, setThemeIndex] = useState(0);
   const [showLogin, setShowLogin] = useState(false);
   const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
-  const [play] = useSound('/sounds/splash.mp3', { 
+  const [play] = useSound('/sounds/splash.mp3', {
     volume: 0.5,
     onplay: () => {
       if (audioContext?.state === 'suspended') {
         audioContext.resume();
       }
-    }
+    },
   });
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   const themes = [
-    { background: "from-indigo-500 to-purple-600" },
-    { background: "from-blue-500 to-teal-600" },
-    { background: "from-red-500 to-orange-600" },
+    { background: 'from-indigo-500 to-purple-600' },
+    { background: 'from-blue-500 to-teal-600' },
+    { background: 'from-red-500 to-orange-600' },
   ];
 
   useEffect(() => {
@@ -210,11 +215,13 @@ const SplashScreen: React.FC = () => {
         <ProgressBar progress={loadingProgress} />
       </div>
       {!showLogin ? (
-        <motion.div>
-          {/* Splash content */}
-        </motion.div>
+        <motion.div>{/* Splash content */}</motion.div>
       ) : (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}>
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1 }}
+        >
           {/* Login form */}
         </motion.div>
       )}
