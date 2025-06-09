@@ -29,10 +29,12 @@ export const Header: React.FC = () => {
   const { signOut, profile } = useAuthStore();
 
   const isLoginPage = location.pathname === '/login';
-  const isAuthenticated = ['/student-dashboard', '/teacher-dashboard'].includes(
-    location.pathname
-  );
-  const isTeacher = location.pathname === '/teacher-dashboard';
+  const isAuthenticated =
+    location.pathname.includes('admin') ||
+    location.pathname.includes('teacher') ||
+    location.pathname.includes('student');
+  const isTeacher = location.pathname === '/teacher';
+  const isAdmin = location.pathname.includes('/admin');
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -61,13 +63,29 @@ export const Header: React.FC = () => {
   };
 
   const getNavLinks = () => {
+    if (isAdmin) {
+      return [
+        {
+          to: '/admin/dashboard',
+          icon: <LayoutDashboard className="h-5 w-5" />,
+          text: 'Admin Dashboard',
+          active: location.pathname === '/admin/dashboard',
+        },
+        {
+          to: '/admin/teacher/create',
+          icon: <LayoutDashboard className="h-5 w-5" />,
+          text: 'Teacher',
+          active: location.pathname === '/admin/teacher/create',
+        },
+      ];
+    }
     if (isTeacher) {
       return [
         {
           to: '/teacher-dashboard',
           icon: <LayoutDashboard className="h-5 w-5" />,
           text: 'Dashboard',
-          active: location.pathname === '/teacher-dashboard',
+          active: location.pathname === '/teacher/dashboard',
         },
         {
           to: '/create-test',
@@ -94,7 +112,7 @@ export const Header: React.FC = () => {
         to: '/student-dashboard',
         icon: <LayoutDashboard className="h-5 w-5" />,
         text: 'Dashboard',
-        active: location.pathname === '/student-dashboard',
+        active: location.pathname === '/student/dashboard',
       },
       {
         to: '/student-tests',

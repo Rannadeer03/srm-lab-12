@@ -52,7 +52,6 @@ export const Login: React.FC = () => {
 
     try {
       const result = await signInWithEmail(formData.email, formData.password);
-      navigate('/auth/callback');
 
       // Disabling Splashscreen on second time
       if (!result.success) {
