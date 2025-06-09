@@ -1,4 +1,4 @@
-import { Download, Eye, FileText } from 'lucide-react';
+import { Download, Eye, FileText, Trash } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import type { CourseMaterial, Subject } from '../services/api';
 import { api } from '../services/api';
@@ -165,6 +165,21 @@ const TeacherCourseUpload: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleDelete = async (materialId: string) => {
+    try {
+      setError('');
+      await api.deleteCourseMaterial(materialId);
+      setMaterials((prev) => prev.filter((m) => m.id !== materialId));
+      setMessage('Material deleted successfully.');
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to delete course material. Please try again.'
+      );
+    }
   };
 
   return (
@@ -345,6 +360,13 @@ const TeacherCourseUpload: React.FC = () => {
                       title="Download"
                     >
                       <Download className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(material.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete"
+                    >
+                      <Trash className="h-5 w-5" />
                     </button>
                   </div>
                 </div>

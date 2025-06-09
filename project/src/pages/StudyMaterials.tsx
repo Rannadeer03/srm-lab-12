@@ -18,7 +18,7 @@ interface CourseMaterial {
   subject_name: string;
   subject_code: string;
   material_type: string;
-  file_path: string;
+  path: string;
   filename: string;
   upload_date: string;
 }
@@ -65,7 +65,7 @@ export const StudyMaterials: React.FC = () => {
             subject_name: material.subjects.name,
             subject_code: material.subjects.code,
             material_type: material.material_type,
-            file_path: material.file_path,
+            path: material.path,
             filename: material.filename,
             upload_date: material.created_at
           }));
@@ -99,7 +99,7 @@ export const StudyMaterials: React.FC = () => {
       // Get the public URL for the file
       const { data: { publicUrl } } = supabase.storage
         .from('course_materials')
-        .getPublicUrl(material.file_path);
+        .getPublicUrl(material.path);
       
       if (action === 'view') {
         // For viewing, open in a new tab
