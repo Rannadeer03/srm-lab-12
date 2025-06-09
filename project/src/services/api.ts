@@ -470,10 +470,10 @@ export const api = {
       // Upload file to Supabase Storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `course-materials/${fileName}`;
+      const filePath = `course_materials/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('course-materials')
+        .from('course_materials')
         .upload(filePath, file, {
           cacheControl: '3600',
           upsert: false
@@ -483,7 +483,7 @@ export const api = {
 
       // Create course material record
       const { data: material, error: insertError } = await supabase
-        .from('course-materials')
+        .from('course_materials')
         .insert([{
           subject_id,
           title,
@@ -550,7 +550,7 @@ export const api = {
     // Delete the file from storage
     if (material?.path) {
       const { error: deleteFileError } = await supabase.storage
-        .from('course-materials')
+        .from('course_materials')
         .remove([material.path]);
 
       if (deleteFileError) throw deleteFileError;
