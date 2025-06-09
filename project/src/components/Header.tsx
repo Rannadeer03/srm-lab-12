@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  BookOpen, 
-  Menu, 
-  X, 
-  LogOut, 
-  LayoutDashboard, 
-  ClipboardList, 
-  BarChart2, 
-  Plus,
-  User,
-  Settings,
+import {
+  BarChart2,
   Bell,
-  HelpCircle,
+  BookOpen,
   ChevronDown,
-  MessageCircle
+  ClipboardList,
+  HelpCircle,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  MessageCircle,
+  Plus,
+  Settings,
+  User,
+  X,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
 export const Header: React.FC = () => {
@@ -26,10 +26,12 @@ export const Header: React.FC = () => {
   const [showHelpMenu, setShowHelpMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuthStore();
-  
+  const { signOut, profile } = useAuthStore();
+
   const isLoginPage = location.pathname === '/login';
-  const isAuthenticated = ['/student-dashboard', '/teacher-dashboard'].includes(location.pathname);
+  const isAuthenticated = ['/student-dashboard', '/teacher-dashboard'].includes(
+    location.pathname
+  );
   const isTeacher = location.pathname === '/teacher-dashboard';
 
   // Close dropdowns when clicking outside
@@ -37,9 +39,11 @@ export const Header: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       if (showProfileMenu || showNotifications || showHelpMenu) {
         const target = event.target as HTMLElement;
-        if (!target.closest('.profile-menu') && 
-            !target.closest('.notifications-menu') && 
-            !target.closest('.help-menu')) {
+        if (
+          !target.closest('.profile-menu') &&
+          !target.closest('.notifications-menu') &&
+          !target.closest('.help-menu')
+        ) {
           setShowProfileMenu(false);
           setShowNotifications(false);
           setShowHelpMenu(false);
@@ -59,54 +63,54 @@ export const Header: React.FC = () => {
   const getNavLinks = () => {
     if (isTeacher) {
       return [
-        { 
-          to: '/teacher-dashboard', 
-          icon: <LayoutDashboard className="h-5 w-5" />, 
+        {
+          to: '/teacher-dashboard',
+          icon: <LayoutDashboard className="h-5 w-5" />,
           text: 'Dashboard',
-          active: location.pathname === '/teacher-dashboard'
+          active: location.pathname === '/teacher-dashboard',
         },
-        { 
-          to: '/create-test', 
-          icon: <Plus className="h-5 w-5" />, 
+        {
+          to: '/create-test',
+          icon: <Plus className="h-5 w-5" />,
           text: 'Create Test',
-          active: location.pathname === '/create-test'
+          active: location.pathname === '/create-test',
         },
-        { 
-          to: '/manage-tests', 
-          icon: <ClipboardList className="h-5 w-5" />, 
+        {
+          to: '/manage-tests',
+          icon: <ClipboardList className="h-5 w-5" />,
           text: 'Manage Tests',
-          active: location.pathname === '/manage-tests'
+          active: location.pathname === '/manage-tests',
         },
-        { 
-          to: '/results', 
-          icon: <BarChart2 className="h-5 w-5" />, 
+        {
+          to: '/results',
+          icon: <BarChart2 className="h-5 w-5" />,
           text: 'Results',
-          active: location.pathname === '/results'
-        }
+          active: location.pathname === '/results',
+        },
       ];
     }
     return [
-      { 
-        to: '/student-dashboard', 
-        icon: <LayoutDashboard className="h-5 w-5" />, 
+      {
+        to: '/student-dashboard',
+        icon: <LayoutDashboard className="h-5 w-5" />,
         text: 'Dashboard',
-        active: location.pathname === '/student-dashboard'
+        active: location.pathname === '/student-dashboard',
       },
-      { 
+      {
         to: '/student-tests',
-        icon: <ClipboardList className="h-5 w-5" />, 
+        icon: <ClipboardList className="h-5 w-5" />,
         text: 'Tests',
         active: location.pathname === '/student-tests',
         onClick: () => {
           navigate('/student-tests');
-        }
+        },
       },
-      { 
-        to: '/results', 
-        icon: <BarChart2 className="h-5 w-5" />, 
+      {
+        to: '/results',
+        icon: <BarChart2 className="h-5 w-5" />,
         text: 'Results',
-        active: location.pathname === '/results'
-      }
+        active: location.pathname === '/results',
+      },
     ];
   };
 
@@ -115,8 +119,14 @@ export const Header: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
           {/* Logo and Brand */}
-          <Link 
-            to={isAuthenticated ? (isTeacher ? '/teacher-dashboard' : '/student-dashboard') : '/'} 
+          <Link
+            to={
+              isAuthenticated
+                ? isTeacher
+                  ? '/teacher-dashboard'
+                  : '/student-dashboard'
+                : '/'
+            }
             className="flex items-center space-x-2 hover:opacity-75 transition-opacity"
           >
             <BookOpen className="h-8 w-8 text-indigo-600" />
@@ -127,15 +137,16 @@ export const Header: React.FC = () => {
           <nav className="hidden md:flex items-center space-x-1">
             {isAuthenticated && (
               <>
-                {getNavLinks().map((link) => (
+                {getNavLinks().map((link) =>
                   link.onClick ? (
                     <button
                       key={link.to + link.text}
                       onClick={link.onClick}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
-                        ${link.active 
-                          ? 'bg-indigo-50 text-indigo-700' 
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ${
+                          link.active
+                            ? 'bg-indigo-50 text-indigo-700'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
                     >
                       {link.icon}
@@ -146,36 +157,41 @@ export const Header: React.FC = () => {
                       key={link.to + link.text}
                       to={link.to}
                       className={`flex items-center space-x-2 px-4 py-2 rounded-md text-sm font-medium transition-colors
-                        ${link.active 
-                          ? 'bg-indigo-50 text-indigo-700' 
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ${
+                          link.active
+                            ? 'bg-indigo-50 text-indigo-700'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                         }`}
                     >
                       {link.icon}
                       <span>{link.text}</span>
                     </Link>
                   )
-                ))}
+                )}
 
                 {/* Notifications */}
                 <div className="relative notifications-menu">
-                  <button 
+                  <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     className={`p-2 rounded-full transition-colors ${
-                      showNotifications 
-                        ? 'bg-gray-100 text-gray-900' 
+                      showNotifications
+                        ? 'bg-gray-100 text-gray-900'
                         : 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
                     }`}
                   >
                     <Bell className="h-5 w-5" />
                   </button>
-                  
+
                   {showNotifications && (
                     <div className="absolute right-0 mt-2 w-80 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                       <div className="p-4">
-                        <h3 className="text-sm font-medium text-gray-900">Notifications</h3>
+                        <h3 className="text-sm font-medium text-gray-900">
+                          Notifications
+                        </h3>
                         {notifications.length === 0 ? (
-                          <p className="mt-2 text-sm text-gray-500">No new notifications</p>
+                          <p className="mt-2 text-sm text-gray-500">
+                            No new notifications
+                          </p>
                         ) : (
                           <div className="mt-2 space-y-2">
                             {/* Add notifications here */}
@@ -191,17 +207,19 @@ export const Header: React.FC = () => {
                   <button
                     onClick={() => setShowProfileMenu(!showProfileMenu)}
                     className={`flex items-center space-x-2 p-2 rounded-md transition-colors ${
-                      showProfileMenu 
-                        ? 'bg-gray-100 text-gray-900' 
+                      showProfileMenu
+                        ? 'bg-gray-100 text-gray-900'
                         : 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
                     }`}
                   >
                     <User className="h-5 w-5" />
-                    <ChevronDown className={`h-4 w-4 transition-transform ${
-                      showProfileMenu ? 'transform rotate-180' : ''
-                    }`} />
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        showProfileMenu ? 'transform rotate-180' : ''
+                      }`}
+                    />
                   </button>
-                  
+
                   {showProfileMenu && (
                     <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                       <div className="py-1">
@@ -242,17 +260,19 @@ export const Header: React.FC = () => {
                   <button
                     onClick={() => setShowHelpMenu(!showHelpMenu)}
                     className={`flex items-center space-x-2 p-2 rounded-md transition-colors ${
-                      showHelpMenu 
-                        ? 'bg-gray-100 text-gray-900' 
+                      showHelpMenu
+                        ? 'bg-gray-100 text-gray-900'
                         : 'text-gray-400 hover:text-gray-500 hover:bg-gray-50'
                     }`}
                   >
                     <HelpCircle className="h-5 w-5" />
-                    <ChevronDown className={`h-4 w-4 transition-transform ${
-                      showHelpMenu ? 'transform rotate-180' : ''
-                    }`} />
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        showHelpMenu ? 'transform rotate-180' : ''
+                      }`}
+                    />
                   </button>
-                  
+
                   {showHelpMenu && (
                     <div className="absolute right-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
                       <div className="py-1">
@@ -332,7 +352,7 @@ export const Header: React.FC = () => {
           <div className="px-2 pt-2 pb-3 space-y-1">
             {isAuthenticated ? (
               <>
-                {getNavLinks().map((link) => (
+                {getNavLinks().map((link) =>
                   link.onClick ? (
                     <button
                       key={link.to + link.text}
@@ -364,7 +384,7 @@ export const Header: React.FC = () => {
                       <span>{link.text}</span>
                     </Link>
                   )
-                ))}
+                )}
                 <button
                   onClick={handleLogout}
                   className="flex w-full items-center space-x-2 px-3 py-2 rounded-md text-base font-medium text-red-700 hover:bg-red-50"

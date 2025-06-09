@@ -1,8 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Clock, CheckCircle2, BookOpen } from 'lucide-react';
-import { testService, testResultService, Question, Test } from '../services/supabaseApi';
-import { useAuthStore } from '../store/authStore';
+import { BookOpen, CheckCircle2, Clock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  Question,
+  Test,
+  testResultService,
+  testService,
+} from '../../services/supabaseApi';
+import { useAuthStore } from '../../store/authStore';
 
 const JeeTestInterface: React.FC = () => {
   const { testId } = useParams<{ testId: string }>();
@@ -11,7 +16,9 @@ const JeeTestInterface: React.FC = () => {
   const [test, setTest] = useState<Test | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<{ [key: string]: string }>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<{
+    [key: string]: string;
+  }>({});
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [showInstructions, setShowInstructions] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -102,7 +109,9 @@ const JeeTestInterface: React.FC = () => {
       });
 
       const percentage = totalMarks > 0 ? (scoredMarks / totalMarks) * 100 : 0;
-      const timeTaken = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+      const timeTaken = Math.floor(
+        (new Date().getTime() - startTime.getTime()) / 1000
+      );
 
       // Save test result
       await testResultService.createTestResult({
@@ -113,7 +122,7 @@ const JeeTestInterface: React.FC = () => {
         percentage: Math.max(0, percentage),
         time_taken: timeTaken,
         answers: selectedAnswers,
-        submitted_at: new Date().toISOString()
+        submitted_at: new Date().toISOString(),
       });
 
       // Navigate to results page
@@ -123,8 +132,8 @@ const JeeTestInterface: React.FC = () => {
           total: totalMarks,
           percentage: Math.max(0, percentage).toFixed(1),
           testTitle: test.title,
-          timeTaken
-        }
+          timeTaken,
+        },
       });
     } catch (error) {
       console.error('Error submitting test:', error);
@@ -157,14 +166,17 @@ const JeeTestInterface: React.FC = () => {
     return (
       <div className="min-h-screen bg-gray-100 p-8">
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
-          <h2 className="text-3xl font-bold mb-6 text-center">Test Instructions</h2>
+          <h2 className="text-3xl font-bold mb-6 text-center">
+            Test Instructions
+          </h2>
           <div className="space-y-4 mb-8">
             <div className="flex items-start">
               <Clock className="h-6 w-6 mr-3 mt-1 text-indigo-600" />
               <div>
                 <h3 className="text-lg font-semibold mb-2">Time Duration</h3>
                 <p className="text-gray-600">
-                  The test duration is {test.duration} minutes. The timer will start once you begin the test.
+                  The test duration is {test.duration} minutes. The timer will
+                  start once you begin the test.
                 </p>
               </div>
             </div>
@@ -173,7 +185,8 @@ const JeeTestInterface: React.FC = () => {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Test Structure</h3>
                 <p className="text-gray-600">
-                  The test contains {questions.length} questions. Each question has multiple-choice options.
+                  The test contains {questions.length} questions. Each question
+                  has multiple-choice options.
                 </p>
               </div>
             </div>
@@ -182,7 +195,8 @@ const JeeTestInterface: React.FC = () => {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Marking Scheme</h3>
                 <p className="text-gray-600">
-                  Each correct answer will be awarded marks as per the test's marking scheme.
+                  Each correct answer will be awarded marks as per the test's
+                  marking scheme.
                 </p>
               </div>
             </div>
@@ -247,35 +261,46 @@ const JeeTestInterface: React.FC = () => {
               </div>
 
               <div className="mb-8">
-                <h3 className="text-lg mb-6">{questions[currentQuestionIndex]?.question_text}</h3>
+                <h3 className="text-lg mb-6">
+                  {questions[currentQuestionIndex]?.question_text}
+                </h3>
                 <div className="space-y-3">
-                  {questions[currentQuestionIndex]?.options.map((option, index) => (
-                    <label
-                      key={index}
-                      className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name={`question-${questions[currentQuestionIndex]?.id}`}
-                        value={option}
-                        checked={selectedAnswers[questions[currentQuestionIndex]?.id!] === option}
-                        onChange={(e) =>
-                          setSelectedAnswers((prev) => ({
-                            ...prev,
-                            [questions[currentQuestionIndex]?.id!]: e.target.value
-                          }))
-                        }
-                        className="mr-3"
-                      />
-                      <span>{option}</span>
-                    </label>
-                  ))}
+                  {questions[currentQuestionIndex]?.options.map(
+                    (option, index) => (
+                      <label
+                        key={index}
+                        className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name={`question-${questions[currentQuestionIndex]?.id}`}
+                          value={option}
+                          checked={
+                            selectedAnswers[
+                              questions[currentQuestionIndex]?.id!
+                            ] === option
+                          }
+                          onChange={(e) =>
+                            setSelectedAnswers((prev) => ({
+                              ...prev,
+                              [questions[currentQuestionIndex]?.id!]:
+                                e.target.value,
+                            }))
+                          }
+                          className="mr-3"
+                        />
+                        <span>{option}</span>
+                      </label>
+                    )
+                  )}
                 </div>
               </div>
 
               <div className="flex justify-between">
                 <button
-                  onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
+                  onClick={() =>
+                    setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))
+                  }
                   disabled={currentQuestionIndex === 0}
                   className="bg-gray-200 text-gray-700 px-6 py-2 rounded-md hover:bg-gray-300 disabled:opacity-50"
                 >

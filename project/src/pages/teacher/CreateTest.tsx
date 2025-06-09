@@ -1,14 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X, Clock, BookOpen, Target } from 'lucide-react';
-import { questionService, testService, Question, Test } from '../services/supabaseApi';
-import { subjectService, Subject } from '../services/subjectService';
-import { useAuthStore } from '../store/authStore';
+import { Subject, subjectService } from '../../services/subjectService';
+import {
+  Question,
+  questionService,
+  testService,
+} from '../../services/supabaseApi';
+import { useAuthStore } from '../../store/authStore';
 
 const CreateTest: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<'details' | 'questions' | 'review'>('details');
+  const [activeTab, setActiveTab] = useState<
+    'details' | 'questions' | 'review'
+  >('details');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [availableQuestions, setAvailableQuestions] = useState<Question[]>([]);
   const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
@@ -26,7 +31,7 @@ const CreateTest: React.FC = () => {
     allow_late_submissions: false,
     target_easy: 30,
     target_medium: 50,
-    target_hard: 20
+    target_hard: 20,
   });
 
   useEffect(() => {
@@ -79,7 +84,7 @@ const CreateTest: React.FC = () => {
         allow_late_submissions: testData.allow_late_submissions,
         target_easy: testData.target_easy,
         target_medium: testData.target_medium,
-        target_hard: testData.target_hard
+        target_hard: testData.target_hard,
       });
 
       // Add selected questions to test

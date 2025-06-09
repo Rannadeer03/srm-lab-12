@@ -3,31 +3,34 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
-import StudentAssignmentView from './components/StudentAssignmentView';
-import TeacherAssignmentUpload from './components/TeacherAssignmentUpload';
-import TeacherCourseUpload from './components/TeacherCourseUpload';
-import { AdminDashboard } from './pages/AdminDashboard';
-import { AuthCallback } from './pages/AuthCallback';
-import { CreateProfile } from './pages/CreateProfile';
-import CreateTest from './pages/CreateTest';
+import { AuthCallback } from './pages/auth/AuthCallback';
+import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
 import Home from './pages/Home';
-import JeeTestInterface from './pages/JeeTestInterface';
-import { Login } from './pages/Login';
-import { NewStudentDashboard } from './pages/NewStudentDashboard';
-import { Profile } from './pages/Profile';
-import { Register } from './pages/Register';
-import { StudyMaterials } from './pages/StudyMaterials';
-import { TeacherDashboard } from './pages/TeacherDashboard';
+import {
+  adminRoutes,
+  commonProtectedRoutes,
+  studentRoutes,
+  teacherRoutes,
+} from './routes';
 import { useAuthStore } from './store/authStore';
 
 // Protected route component
-const RequireAuth = ({ children }: { children: JSX.Element }) => {
+const RoleBasedRoute = ({
+  allowedRoles,
+  children,
+}: {
+  allowedRoles: string[];
+  children: JSX.Element;
+}) => {
   const { profile } = useAuthStore();
   const location = useLocation();
 
   if (!profile) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
+  if (!allowedRoles.includes(profile.role))
+    return <Navigate to={'/home'} replace />;
   return children;
 };
 
@@ -67,95 +70,53 @@ const App: React.FC = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
 
-          {/* Protected Routes */}
-          <Route
-            path="/create-profile"
-            element={
-              <RequireAuth>
-                <CreateProfile />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/student-dashboard"
-            element={
-              <RequireAuth>
-                <NewStudentDashboard />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/teacher-dashboard"
-            element={
-              <RequireAuth>
-                <TeacherDashboard />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/admin-dashboard"
-            element={
-              <RequireAuth>
-                <AdminDashboard />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/study-materials"
-            element={
-              <RequireAuth>
-                <StudyMaterials />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/teacher/assignments"
-            element={
-              <RequireAuth>
-                <TeacherAssignmentUpload />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/teacher/course-materials"
-            element={
-              <RequireAuth>
-                <TeacherCourseUpload />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/student/assignments"
-            element={
-              <RequireAuth>
-                <StudentAssignmentView />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/teacher/create-test"
-            element={
-              <RequireAuth>
-                <CreateTest />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/tests/:testId"
-            element={
-              <RequireAuth>
-                <JeeTestInterface />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/profile"
-            element={
-              <RequireAuth>
-                <Profile />
-              </RequireAuth>
-            }
-          />
+          {commonProtectedRoutes.map(({ path, element }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <RoleBasedRoute allowedRoles={['student', 'teacher', 'admin']}>
+                  {element}
+                </RoleBasedRoute>
+              }
+            />
+          ))}
+
+          {studentRoutes.map(({ path, element }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <RoleBasedRoute allowedRoles={['student', 'admin']}>
+                  {element}
+                </RoleBasedRoute>
+              }
+            />
+          ))}
+
+          {teacherRoutes.map(({ path, element }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <RoleBasedRoute allowedRoles={['teacher', 'admin']}>
+                  {element}
+                </RoleBasedRoute>
+              }
+            />
+          ))}
+
+          {adminRoutes.map(({ path, element }) => (
+            <Route
+              key={path}
+              path={path}
+              element={
+                <RoleBasedRoute allowedRoles={['admin']}>
+                  {element}
+                </RoleBasedRoute>
+              }
+            />
+          ))}
 
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/home" replace />} />

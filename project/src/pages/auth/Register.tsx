@@ -1,12 +1,12 @@
+import { Building, Eye, EyeOff, Hash, Lock, Mail, User } from 'lucide-react';
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff, ChevronRight, Mail, Hash, Building, Shield } from 'lucide-react';
-import { useAuthStore } from '../store/authStore';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuthStore } from '../../store/authStore';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
   const { registerUser, isLoading, error } = useAuthStore();
-  const [role, setRole] = useState<'student' | 'teacher'>('student');
+  const [role, setRole] = useState<'student' | 'teacher' | 'admin'>('admin');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -19,13 +19,15 @@ export const Register: React.FC = () => {
     registration_number: '',
     faculty_id: '',
     department: '',
-    verification_code: ''
+    verification_code: '',
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -35,7 +37,12 @@ export const Register: React.FC = () => {
     setSuccessMessage(null);
 
     // Validate form data
-    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (
+      !formData.name ||
+      !formData.email ||
+      !formData.password ||
+      !formData.confirmPassword
+    ) {
       setLocalError('Please fill in all required fields');
       return;
     }
@@ -65,10 +72,10 @@ export const Register: React.FC = () => {
       return;
     }
 
-    if ((role === 'teacher') && !formData.verification_code) {
-      setLocalError('Please enter the verification code');
-      return;
-    }
+    // if (role === 'teacher' && !formData.verification_code) {
+    //   setLocalError('Please enter the verification code');
+    //   return;
+    // }
 
     try {
       const result = await registerUser({
@@ -76,10 +83,12 @@ export const Register: React.FC = () => {
         password: formData.password,
         name: formData.name,
         role,
-        registration_number: role === 'student' ? formData.registration_number : undefined,
+        registration_number:
+          role === 'student' ? formData.registration_number : undefined,
         faculty_id: role === 'teacher' ? formData.faculty_id : undefined,
         department: formData.department,
-        verification_code: (role === 'teacher') ? formData.verification_code : undefined
+        verification_code:
+          role === 'teacher' ? formData.verification_code : undefined,
       });
 
       if (result.success) {
@@ -93,7 +102,7 @@ export const Register: React.FC = () => {
           registration_number: '',
           faculty_id: '',
           department: '',
-          verification_code: ''
+          verification_code: '',
         });
       } else {
         setLocalError(result.message);
@@ -156,7 +165,10 @@ export const Register: React.FC = () => {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Full Name
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -177,7 +189,10 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Email address
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -199,7 +214,10 @@ export const Register: React.FC = () => {
 
             {role === 'student' && (
               <div>
-                <label htmlFor="registration_number" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="registration_number"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Registration Number
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -222,7 +240,10 @@ export const Register: React.FC = () => {
 
             {role === 'teacher' && (
               <div>
-                <label htmlFor="faculty_id" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="faculty_id"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Faculty ID
                 </label>
                 <div className="mt-1 relative rounded-md shadow-sm">
@@ -244,7 +265,10 @@ export const Register: React.FC = () => {
             )}
 
             <div>
-              <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="department"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Department
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -261,16 +285,26 @@ export const Register: React.FC = () => {
                 >
                   <option value="">Select a department</option>
                   <option value="Computer Science">Computer Science</option>
-                  <option value="Electrical Engineering">Electrical Engineering</option>
-                  <option value="Mechanical Engineering">Mechanical Engineering</option>
+                  <option value="Electrical Engineering">
+                    Electrical Engineering
+                  </option>
+                  <option value="Mechanical Engineering">
+                    Mechanical Engineering
+                  </option>
                   <option value="Civil Engineering">Civil Engineering</option>
-                  <option value="Information Technology">Information Technology</option>
+                  <option value="Information Technology">
+                    Information Technology
+                  </option>
+                  <option value="super admin">super Admin</option>
                 </select>
               </div>
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Password
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -304,7 +338,10 @@ export const Register: React.FC = () => {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Confirm Password
               </label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -337,7 +374,7 @@ export const Register: React.FC = () => {
               </div>
             </div>
 
-            {(role === 'teacher') && (
+            {/* {(role === 'teacher') && (
               <div>
                 <label htmlFor="verification_code" className="block text-sm font-medium text-gray-700">
                   Verification Code
@@ -358,7 +395,7 @@ export const Register: React.FC = () => {
                   />
                 </div>
               </div>
-            )}
+            )} */}
 
             <div>
               <button

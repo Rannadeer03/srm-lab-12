@@ -1,5 +1,5 @@
-import { supabase } from '../lib/supabase';
 import { API_BASE_URL } from '../config';
+import { supabase } from '../lib/supabase';
 import { Question } from './supabaseApi';
 
 interface ProfileData {
@@ -13,7 +13,6 @@ interface ProfileData {
 
 // Types
 // Re-export from supabaseApi for consistency
-
 
 export interface Subject {
   id: string;
@@ -140,7 +139,7 @@ export const authService = {
       console.error('Error fetching profile:', error);
       throw error;
     }
-  }
+  },
 };
 
 // API Service
@@ -148,17 +147,23 @@ export const api = {
   baseUrl: API_BASE_URL,
 
   // Subjects
-  async addSubject(subject: Omit<Subject, 'id' | 'teacher_id' | 'created_at' | 'updated_at'>) {
-    const { data: { user } } = await supabase.auth.getUser();
+  async addSubject(
+    subject: Omit<Subject, 'id' | 'teacher_id' | 'created_at' | 'updated_at'>
+  ) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
       .from('subjects')
-      .insert([{
-        name: subject.name,
-        code: subject.code,
-        teacher_id: user.id
-      }])
+      .insert([
+        {
+          name: subject.name,
+          code: subject.code,
+          teacher_id: user.id,
+        },
+      ])
       .select()
       .single();
 
@@ -167,7 +172,9 @@ export const api = {
   },
 
   async getSubjects() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
     const { data, error } = await supabase
@@ -192,7 +199,9 @@ export const api = {
   async deleteAllSubjects() {
     try {
       const subjects = await this.getSubjects();
-      const deletePromises = subjects.map((subject: Subject) => this.deleteSubject(subject.id));
+      const deletePromises = subjects.map((subject: Subject) =>
+        this.deleteSubject(subject.id)
+      );
       await Promise.all(deletePromises);
     } catch (error) {
       console.error('Error deleting subjects:', error);
@@ -213,20 +222,26 @@ export const api = {
   },
 
   async updateQuestion(questionId: string, updates: Partial<Question>) {
-    const response = await fetch(`${API_BASE_URL}/teacher/questions/${questionId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/questions/${questionId}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      }
+    );
     return response.json();
   },
 
   async deleteQuestion(questionId: string) {
-    const response = await fetch(`${API_BASE_URL}/teacher/questions/${questionId}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/questions/${questionId}`,
+      {
+        method: 'DELETE',
+      }
+    );
     return response.json();
   },
 
@@ -236,7 +251,9 @@ export const api = {
   },
 
   async getQuestionsBySubject(subjectId: string) {
-    const response = await fetch(`${API_BASE_URL}/student/questions/${subjectId}`);
+    const response = await fetch(
+      `${API_BASE_URL}/student/questions/${subjectId}`
+    );
     return response.json();
   },
 
@@ -248,11 +265,17 @@ export const api = {
     dueDate: string,
     file: File
   ): Promise<Assignment> {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
     // Validate file type
-    const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedTypes = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
     if (!allowedTypes.includes(file.type)) {
       throw new Error('Only PDF and Word documents are allowed');
     }
@@ -278,30 +301,38 @@ export const api = {
       // Create assignment record
       const { data, error } = await supabase
         .from('assignments')
-        .insert([{
-          subject_id: subjectId,
-          title,
-          description,
-          due_date: dueDate,
-          file_path: filePath,
-          filename: file.name
-        }])
-        .select(`
+        .insert([
+          {
+            subject_id: subjectId,
+            title,
+            description,
+            due_date: dueDate,
+            file_path: filePath,
+            filename: file.name,
+          },
+        ])
+        .select(
+          `
           *,
           subject:subjects(name, code)
-        `)
+        `
+        )
         .single();
 
       if (error) throw error;
       return data;
     } catch (error) {
       console.error('Upload error:', error);
-      throw error instanceof Error ? error : new Error('Failed to upload assignment');
+      throw error instanceof Error
+        ? error
+        : new Error('Failed to upload assignment');
     }
   },
 
   async getAssignments() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
     // Step 1: Get all subject IDs for this teacher
@@ -325,10 +356,12 @@ export const api = {
   async getAssignmentsBySubject(subjectId: string) {
     const { data, error } = await supabase
       .from('assignments')
-      .select(`
+      .select(
+        `
         *,
         subject:subjects(name, code)
-      `)
+      `
+      )
       .eq('subject_id', subjectId);
 
     if (error) throw error;
@@ -366,12 +399,12 @@ export const api = {
 
   // Student Assignment Views
   async getStudentAssignments() {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const { data, error } = await supabase
-      .from('assignments')
-      .select(`
+    const { data, error } = await supabase.from('assignments').select(`
         *,
         subject:subjects(name, code)
       `);
@@ -383,10 +416,12 @@ export const api = {
   async getStudentAssignmentsBySubject(subjectId: string) {
     const { data, error } = await supabase
       .from('assignments')
-      .select(`
+      .select(
+        `
         *,
         subject:subjects(name, code)
-      `)
+      `
+      )
       .eq('subject_id', subjectId);
 
     if (error) throw error;
@@ -395,13 +430,16 @@ export const api = {
 
   // Study Materials
   async createStudyMaterialFolder(folderName: string) {
-    const response = await fetch(`${API_BASE_URL}/teacher/study-material/folders`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ folder_name: folderName }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/study-material/folders`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ folder_name: folderName }),
+      }
+    );
     return response.json();
   },
 
@@ -410,17 +448,23 @@ export const api = {
     formData.append('subject', subject);
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/teacher/study-material/upload`, {
-      method: 'POST',
-      body: formData,
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/study-material/upload`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
     return response.json();
   },
 
   async deleteStudyMaterialFolder(folderName: string) {
-    const response = await fetch(`${API_BASE_URL}/teacher/study-material/folders/${folderName}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/teacher/study-material/folders/${folderName}`,
+      {
+        method: 'DELETE',
+      }
+    );
     return response.json();
   },
 
@@ -444,11 +488,13 @@ export const api = {
       'application/vnd.ms-powerpoint',
       'application/vnd.openxmlformats-officedocument.presentationml.presentation',
       'video/mp4',
-      'video/webm'
+      'video/webm',
     ];
 
     if (!allowedTypes.includes(file.type)) {
-      throw new Error('Only PDF, Word, PowerPoint, and video files are allowed');
+      throw new Error(
+        'Only PDF, Word, PowerPoint, and video files are allowed'
+      );
     }
 
     // Validate file size (max 100MB)
@@ -476,7 +522,7 @@ export const api = {
         .from('course-materials')
         .upload(filePath, file, {
           cacheControl: '3600',
-          upsert: false
+          upsert: false,
         });
 
       if (uploadError) throw uploadError;
@@ -484,18 +530,20 @@ export const api = {
       // Create course material record
       const { data: material, error: insertError } = await supabase
         .from('course-materials')
-        .insert([{
-          subject_id,
-          title,
-          description,
-          material_type: materialType,
-          filename: file.name,
-          stored_filename: fileName,
-          path: filePath,
-          subject_name: subject.name,
-          subject_code: subject.code,
-          file_type: file.type
-        }])
+        .insert([
+          {
+            subject_id,
+            title,
+            description,
+            material_type: materialType,
+            filename: file.name,
+            stored_filename: fileName,
+            path: filePath,
+            subject_name: subject.name,
+            subject_code: subject.code,
+            file_type: file.type,
+          },
+        ])
         .select()
         .single();
 
@@ -504,11 +552,15 @@ export const api = {
       return material;
     } catch (error) {
       console.error('Upload error:', error);
-      throw error instanceof Error ? error : new Error('Failed to upload course material');
+      throw error instanceof Error
+        ? error
+        : new Error('Failed to upload course material');
     }
   },
 
-  async getCourseMaterialsBySubject(subject_id: string): Promise<CourseMaterial[]> {
+  async getCourseMaterialsBySubject(
+    subject_id: string
+  ): Promise<CourseMaterial[]> {
     const { data, error } = await supabase
       .from('course_materials')
       .select('*')
@@ -527,7 +579,9 @@ export const api = {
     return data;
   },
 
-  async getStudentCourseMaterials(subject_id: string): Promise<CourseMaterial[]> {
+  async getStudentCourseMaterials(
+    subject_id: string
+  ): Promise<CourseMaterial[]> {
     const { data, error } = await supabase
       .from('course_materials')
       .select('*')

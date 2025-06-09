@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  BookOpen, 
-  CheckCircle, 
-  BarChart2, 
-  Plus, 
-  Search, 
-  Filter, 
-  Download,
-  ClipboardList,
-  FileText,
-  Calendar,
-  Settings,
-  GraduationCap,
-  Target,
+import {
   Award,
+  BarChart2,
   Book,
-  PenTool
+  BookOpen,
+  Calendar,
+  CheckCircle,
+  ClipboardList,
+  Download,
+  FileText,
+  Filter,
+  GraduationCap,
+  PenTool,
+  Plus,
+  Search,
+  Settings,
+  Target,
+  Users,
 } from 'lucide-react';
-import { api } from '../services/api';
-import { testService, Test } from '../services/supabaseApi';
-import { useAuthStore } from '../store/authStore';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { api } from '../../services/api';
+import { Test, testService } from '../../services/supabaseApi';
+import { useAuthStore } from '../../store/authStore';
 
 const mockTests = [
   {
@@ -115,7 +115,7 @@ export const TeacherDashboard: React.FC = () => {
       icon: <ClipboardList className="h-8 w-8" />,
       image: '/images/tests.jpg',
       color: 'bg-blue-500',
-      description: 'Create and manage tests'
+      description: 'Create and manage tests',
     },
     {
       id: 'assignments',
@@ -123,7 +123,7 @@ export const TeacherDashboard: React.FC = () => {
       icon: <FileText className="h-8 w-8" />,
       image: '/images/assignments.jpg',
       color: 'bg-green-500',
-      description: 'Manage student assignments'
+      description: 'Manage student assignments',
     },
     {
       id: 'materials',
@@ -131,7 +131,7 @@ export const TeacherDashboard: React.FC = () => {
       icon: <Book className="h-8 w-8" />,
       image: '/images/materials.jpg',
       color: 'bg-purple-500',
-      description: 'Upload and manage study materials'
+      description: 'Upload and manage study materials',
     },
     {
       id: 'schedule',
@@ -139,7 +139,7 @@ export const TeacherDashboard: React.FC = () => {
       icon: <Calendar className="h-8 w-8" />,
       image: '/images/schedule.jpg',
       color: 'bg-yellow-500',
-      description: 'Manage class schedules'
+      description: 'Manage class schedules',
     },
     {
       id: 'grades',
@@ -147,7 +147,7 @@ export const TeacherDashboard: React.FC = () => {
       icon: <PenTool className="h-8 w-8" />,
       image: '/images/grades.jpg',
       color: 'bg-red-500',
-      description: 'Manage student grades'
+      description: 'Manage student grades',
     },
     {
       id: 'settings',
@@ -155,8 +155,8 @@ export const TeacherDashboard: React.FC = () => {
       icon: <Settings className="h-8 w-8" />,
       image: '/images/settings.jpg',
       color: 'bg-gray-500',
-      description: 'Manage account settings'
-    }
+      description: 'Manage account settings',
+    },
   ];
 
   const handleMenuClick = (id: string) => {
@@ -198,7 +198,7 @@ export const TeacherDashboard: React.FC = () => {
       try {
         const subjectsData = await api.getSubjects();
         // We can use subjectsData for future features if needed
-        console.log('Subjects loaded:', subjectsData);
+        // console.log('Subjects loaded:', subjectsData);
       } catch (error) {
         console.error('Error fetching subjects:', error);
       }
@@ -223,9 +223,12 @@ export const TeacherDashboard: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const filteredTests = tests.filter((test) => {
-    const matchesSearch = test.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || test.status === filterStatus;
+  const filteredTests = tests.filter((test: any) => {
+    const matchesSearch = test.name
+      .toLowerCase()
+      .includes(searchQuery.toLowerCase());
+    const matchesStatus =
+      filterStatus === 'all' || test.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
 
@@ -236,13 +239,14 @@ export const TeacherDashboard: React.FC = () => {
       setShowEditTestModal(true);
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-100">
       {showNewTestModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
           <div className="bg-white p-8 rounded-lg">
-            <h2 className="text-2xl font-bold mb-4">Test Created Successfully!</h2>
+            <h2 className="text-2xl font-bold mb-4">
+              Test Created Successfully!
+            </h2>
             <p>The test has been successfully created.</p>
             <button
               onClick={() => setShowNewTestModal(false)}
@@ -278,7 +282,9 @@ export const TeacherDashboard: React.FC = () => {
                 <GraduationCap className="h-12 w-12" />
                 <div>
                   <h1 className="text-3xl font-bold">Teacher Portal</h1>
-                  <p className="text-blue-100">Welcome back, Professor Smith! 👋</p>
+                  <p className="text-blue-100">
+                    Welcome back, Professor {user?.user_metadata.name} 👋
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -299,21 +305,29 @@ export const TeacherDashboard: React.FC = () => {
             <div className="inline-flex items-center justify-center p-3 rounded-full bg-blue-100 text-blue-600 mb-4">
               <Users className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Total Students</h3>
-            <p className="text-3xl font-bold text-blue-600 mt-2">156</p>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Total Students
+            </h3>
+            <p className="text-3xl font-bold text-blue-600 mt-2">0</p>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-6 text-center">
             <div className="inline-flex items-center justify-center p-3 rounded-full bg-green-100 text-green-600 mb-4">
               <ClipboardList className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Active Tests</h3>
-            <p className="text-3xl font-bold text-green-600 mt-2">{tests.filter((t) => t.status === 'active').length}</p>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Active Tests
+            </h3>
+            <p className="text-3xl font-bold text-green-600 mt-2">
+              {tests.filter((t: any) => t.status === 'active').length}
+            </p>
           </div>
           <div className="bg-white rounded-lg shadow-sm p-6 text-center">
             <div className="inline-flex items-center justify-center p-3 rounded-full bg-purple-100 text-purple-600 mb-4">
               <BarChart2 className="h-6 w-6" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">Average Score</h3>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Average Score
+            </h3>
             <p className="text-3xl font-bold text-purple-600 mt-2">78%</p>
           </div>
         </div>
@@ -329,22 +343,22 @@ export const TeacherDashboard: React.FC = () => {
               }`}
             >
               {/* Background Image */}
-              <div 
+              <div
                 className="absolute inset-0 bg-cover bg-center opacity-20 group-hover:opacity-30 transition-opacity duration-200"
                 style={{ backgroundImage: `url(${item.image})` }}
               />
 
               {/* Content */}
               <div className="relative p-6">
-                <div className={`inline-flex items-center justify-center p-3 rounded-lg ${item.color} text-white mb-4`}>
+                <div
+                  className={`inline-flex items-center justify-center p-3 rounded-lg ${item.color} text-white mb-4`}
+                >
                   {item.icon}
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">
                   {item.title}
                 </h3>
-                <p className="text-sm text-gray-600">
-                  {item.description}
-                </p>
+                <p className="text-sm text-gray-600">{item.description}</p>
               </div>
             </button>
           ))}
@@ -354,10 +368,13 @@ export const TeacherDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Welcome back, Professor Smith!</h1>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Welcome back, Professor {user?.user_metadata.name}!
+              </h1>
               <p className="mt-2 text-gray-600">
-                You have {tests.filter((t) => t.status === 'active').length} active tests and{' '}
-                {recentActivities.length} recent activities.
+                You have{' '}
+                {tests.filter((t: any) => t.status === 'active').length} active
+                tests and {recentActivities.length} recent activities.
               </p>
             </div>
             <Link
@@ -380,12 +397,16 @@ export const TeacherDashboard: React.FC = () => {
           <StatCard
             icon={<BookOpen className="h-6 w-6 text-green-600" />}
             title="Active Tests"
-            value={tests.filter((t) => t.status === 'active').length.toString()}
+            value={tests
+              .filter((t: any) => t.status === 'active')
+              .length.toString()}
           />
           <StatCard
             icon={<CheckCircle className="h-6 w-6 text-blue-600" />}
             title="Completed Tests"
-            value={tests.filter((t) => t.status === 'completed').length.toString()}
+            value={tests
+              .filter((t: any) => t.status === 'completed')
+              .length.toString()}
           />
           <StatCard
             icon={<BarChart2 className="h-6 w-6 text-purple-600" />}
@@ -398,7 +419,9 @@ export const TeacherDashboard: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm mb-8">
           <div className="p-6 border-b border-gray-200">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-              <h2 className="text-lg font-medium text-gray-900">Test Management</h2>
+              <h2 className="text-lg font-medium text-gray-900">
+                Test Management
+              </h2>
               <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
                 <div className="relative">
                   <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
@@ -452,12 +475,15 @@ export const TeacherDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredTests.map((test) => (
+                {filteredTests.map((test: any) => (
                   <tr key={test.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{test.name}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        {test.name}
+                      </div>
                       <div className="text-sm text-gray-500">
-                        Created {new Date(test.dateCreated).toLocaleDateString()}
+                        Created{' '}
+                        {new Date(test.dateCreated).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -476,7 +502,9 @@ export const TeacherDashboard: React.FC = () => {
                       >
                         Edit
                       </button>
-                      <button className="text-indigo-600 hover:text-indigo-900">View Results</button>
+                      <button className="text-indigo-600 hover:text-indigo-900">
+                        View Results
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -488,23 +516,30 @@ export const TeacherDashboard: React.FC = () => {
         {/* Recent Activity */}
         <div className="bg-white rounded-lg shadow-sm">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Recent Activity</h2>
+            <h2 className="text-lg font-medium text-gray-900">
+              Recent Activity
+            </h2>
           </div>
           <div className="divide-y divide-gray-200">
             {recentActivities.map((activity) => (
               <div key={activity.id} className="p-6 hover:bg-gray-50">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{activity.student}</p>
+                    <p className="text-sm font-medium text-gray-900">
+                      {activity.student}
+                    </p>
                     <p className="mt-1 text-sm text-gray-500">
                       {activity.action === 'completed' ? (
                         <>
-                          Completed <span className="font-medium">{activity.test}</span> with a score
-                          of <span className="font-medium">{activity.score}%</span>
+                          Completed{' '}
+                          <span className="font-medium">{activity.test}</span>{' '}
+                          with a score of{' '}
+                          <span className="font-medium">{activity.score}%</span>
                         </>
                       ) : (
                         <>
-                          Started <span className="font-medium">{activity.test}</span>
+                          Started{' '}
+                          <span className="font-medium">{activity.test}</span>
                         </>
                       )}
                     </p>
@@ -524,11 +559,11 @@ export const TeacherDashboard: React.FC = () => {
   );
 };
 
-const StatCard: React.FC<{ icon: React.ReactNode; title: string; value: string }> = ({
-  icon,
-  title,
-  value,
-}) => {
+const StatCard: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+}> = ({ icon, title, value }) => {
   return (
     <div className="bg-white overflow-hidden shadow-sm rounded-lg">
       <div className="p-5">
@@ -536,8 +571,12 @@ const StatCard: React.FC<{ icon: React.ReactNode; title: string; value: string }
           <div className="flex-shrink-0">{icon}</div>
           <div className="ml-5 w-0 flex-1">
             <dl>
-              <dt className="text-sm font-medium text-gray-500 truncate">{title}</dt>
-              <dd className="mt-1 text-3xl font-semibold text-gray-900">{value}</dd>
+              <dt className="text-sm font-medium text-gray-500 truncate">
+                {title}
+              </dt>
+              <dd className="mt-1 text-3xl font-semibold text-gray-900">
+                {value}
+              </dd>
             </dl>
           </div>
         </div>

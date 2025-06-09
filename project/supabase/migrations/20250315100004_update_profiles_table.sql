@@ -3,7 +3,7 @@ ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 ALTER TABLE profiles ADD CONSTRAINT profiles_role_check CHECK (role IN ('student', 'teacher', 'admin'));
 
 -- Add policy for service role to insert profiles
-CREATE POLICY "Service role can insert profiles"
+CREATE POLICY "Users can insert their own profile."
   ON profiles
   FOR INSERT
   TO service_role

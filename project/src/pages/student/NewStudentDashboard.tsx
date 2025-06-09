@@ -1,20 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
-import { 
-  BookOpen, 
-  FileText, 
-  ClipboardList, 
-  BarChart2, 
-  Calendar,
-  Settings,
-  GraduationCap,
-  Target,
-  Award,
-  Clock,
-  Book,
-  X
-} from 'lucide-react';
+import { Book, ClipboardList, Clock, FileText, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 interface Test {
   id: string;
@@ -55,7 +42,7 @@ export const NewStudentDashboard: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Fetch tests from Supabase
         const { data: testsData, error: testsError } = await supabase
           .from('tests')
@@ -84,7 +71,7 @@ export const NewStudentDashboard: React.FC = () => {
   }, []);
 
   const getSubjectName = (subjectCode: string) => {
-    const subject = subjects.find(s => s.code === subjectCode);
+    const subject = subjects.find((s) => s.code === subjectCode);
     return subject ? subject.name : 'Unknown Subject';
   };
 
@@ -139,45 +126,59 @@ export const NewStudentDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Student Dashboard</h1>
-        
+        <h1 className="text-2xl font-bold text-gray-900 mb-6">
+          Student Dashboard
+        </h1>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Menu Items */}
-          <div 
+          <div
             onClick={() => handleMenuClick('tests')}
             className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
           >
             <div className="flex items-center">
               <FileText className="h-8 w-8 text-indigo-600" />
               <div className="ml-4">
-                <h2 className="text-lg font-semibold text-gray-900">Available Tests</h2>
-                <p className="text-sm text-gray-500">{availableTests.length} tests available</p>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Available Tests
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {availableTests.length} tests available
+                </p>
               </div>
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => handleMenuClick('study-materials')}
             className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
           >
             <div className="flex items-center">
               <Book className="h-8 w-8 text-indigo-600" />
               <div className="ml-4">
-                <h2 className="text-lg font-semibold text-gray-900">Study Materials</h2>
-                <p className="text-sm text-gray-500">Access your learning resources</p>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Study Materials
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Access your learning resources
+                </p>
               </div>
             </div>
           </div>
 
-          <div 
+          <div
             onClick={() => handleMenuClick('assignments')}
             className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
           >
             <div className="flex items-center">
               <ClipboardList className="h-8 w-8 text-indigo-600" />
               <div className="ml-4">
-                <h2 className="text-lg font-semibold text-gray-900">Assignments</h2>
-                <p className="text-sm text-gray-500">View and submit assignments</p>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Assignments
+                </h2>
+                <p className="text-sm text-gray-500">
+                  View and submit assignments
+                </p>
               </div>
             </div>
           </div>
@@ -189,7 +190,9 @@ export const NewStudentDashboard: React.FC = () => {
             <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-900">Available Tests</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    Available Tests
+                  </h2>
                   <button
                     onClick={() => setShowTestsModal(false)}
                     className="text-gray-400 hover:text-gray-500"
@@ -199,7 +202,9 @@ export const NewStudentDashboard: React.FC = () => {
                 </div>
 
                 {availableTests.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No tests available at the moment.</p>
+                  <p className="text-gray-500 text-center py-4">
+                    No tests available at the moment.
+                  </p>
                 ) : (
                   <div className="space-y-4">
                     {availableTests.map((test) => (
@@ -210,8 +215,12 @@ export const NewStudentDashboard: React.FC = () => {
                       >
                         <div className="flex justify-between items-start">
                           <div>
-                            <h3 className="text-lg font-medium text-gray-900">{test.title}</h3>
-                            <p className="text-sm text-gray-500">{getSubjectName(test.subject)}</p>
+                            <h3 className="text-lg font-medium text-gray-900">
+                              {test.title}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {getSubjectName(test.subject)}
+                            </p>
                           </div>
                           <div className="flex items-center text-sm text-gray-500">
                             <Clock className="h-4 w-4 mr-1" />

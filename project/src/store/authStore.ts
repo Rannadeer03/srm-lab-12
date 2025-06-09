@@ -1,6 +1,8 @@
 import { User } from '@supabase/supabase-js';
 import { create } from 'zustand';
 import { supabase } from '../lib/supabase';
+import { authService } from '../services/auth.service';
+import { ProfileData } from '../types';
 
 interface Profile {
   id: string;
@@ -167,27 +169,15 @@ export const useAuthStore = create<AuthState>((set) => ({
 
         // Try to create the profile if it doesn't exist
         try {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                id: authData.user.id,
-                email: authData.user.email,
-                name: authData.user.user_metadata?.name || 'User',
-                role: authData.user.user_metadata?.role || 'student',
-                auth_provider: 'email',
-                requires_password_change: false,
-              },
-            ])
-            .select()
-            .single();
-
-          if (createError) {
-            console.error('Failed to create profile:', createError);
-            throw new Error(
-              'Failed to create user profile. Please try registering again.'
-            );
-          }
+          const payload: ProfileData = {
+            id: authData.user.id,
+            email: authData.user.email,
+            name: authData.user.user_metadata?.name || 'User',
+            role: authData.user.user_metadata?.role || 'student',
+            auth_provider: 'email',
+            requires_password_change: false,
+          };
+          const newProfile = await authService.createProfile(payload);
 
           profile = newProfile;
         } catch (error) {
@@ -226,14 +216,30 @@ export const useAuthStore = create<AuthState>((set) => ({
       ) {
         throw new Error('Invalid teacher verification code');
       }
-      if (
-        userData.role === 'admin' &&
-        userData.verification_code !== 'ADMIN2024'
-      ) {
-        throw new Error('Invalid admin verification code');
-      }
+      // if (
+      //   userData.role === 'admin' &&
+      //   userData.verification_code !== 'ADMIN2024'
+      // ) {
+      //   throw new Error('Invalid admin verification code');
+      // }
 
       console.log('Starting registration process for:', userData.email);
+
+      const { data: existingUser, error: existingError } = await supabase.rpc(
+        'check_email_exists',
+        {
+          input_email: userData.email,
+        }
+      );
+
+      if (existingError) {
+        console.error('Error checking email:', existingError.message);
+        throw new Error('Failed to check email');
+      }
+
+      if (existingUser) {
+        throw new Error('Email is already in use');
+      }
 
       // Sign up the user with explicit email confirmation settings
       const { data, error } = await supabase.auth.signUp({
@@ -256,6 +262,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       console.log('Auth signup response:', data);
 
       if (data.user) {
+        console.log(data.user);
         // Create profile
         const profileData: any = {
           id: data.user.id,

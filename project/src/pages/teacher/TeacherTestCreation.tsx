@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Save, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { api } from '../services/api';
+import { api } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
-import { Question, QuestionType } from '../types';
+import { Question, QuestionType } from '../../types';
 
 const TeacherTestCreation: React.FC = () => {
   const navigate = useNavigate();

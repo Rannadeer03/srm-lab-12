@@ -5,6 +5,18 @@ export interface User {
   role: 'student' | 'teacher';
 }
 
+export interface ProfileData {
+  id: string;
+  name: string;
+  email: string | undefined;
+  role: 'student' | 'teacher' | 'admin';
+  registration_number?: string;
+  faculty_id?: string;
+  department?: string;
+  requires_password_change: boolean;
+  auth_provider: string;
+}
+
 export interface Question {
   teacher_id: number;
   subject_id: string;

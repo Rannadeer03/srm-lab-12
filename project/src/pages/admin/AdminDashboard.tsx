@@ -1,17 +1,16 @@
-
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Users, 
-  UserCheck, 
-  UserX, 
-  Settings, 
-  BarChart3, 
-  Shield,
-  FileText,
+import {
+  Activity,
+  BarChart3,
   Database,
-  Activity
+  FileText,
+  Settings,
+  Shield,
+  UserCheck,
+  Users,
+  UserX,
 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -32,7 +31,7 @@ export const AdminDashboard: React.FC = () => {
     totalUsers: 0,
     totalStudents: 0,
     totalTeachers: 0,
-    activeTests: 0
+    activeTests: 0,
   });
 
   useEffect(() => {
@@ -46,7 +45,7 @@ export const AdminDashboard: React.FC = () => {
         department: 'Computer Science',
         registration_number: 'CS2021001',
         created_at: '2024-01-15',
-        status: 'active'
+        status: 'active',
       },
       {
         id: '2',
@@ -56,25 +55,30 @@ export const AdminDashboard: React.FC = () => {
         department: 'Computer Science',
         faculty_id: 'FAC001',
         created_at: '2024-01-10',
-        status: 'active'
-      }
+        status: 'active',
+      },
     ];
 
     setUsers(mockUsers);
     setStats({
       totalUsers: mockUsers.length,
-      totalStudents: mockUsers.filter(u => u.role === 'student').length,
-      totalTeachers: mockUsers.filter(u => u.role === 'teacher').length,
-      activeTests: 5
+      totalStudents: mockUsers.filter((u) => u.role === 'student').length,
+      totalTeachers: mockUsers.filter((u) => u.role === 'teacher').length,
+      activeTests: 5,
     });
   }, []);
 
   const handleUserStatusToggle = (userId: string) => {
-    setUsers(users.map(user => 
-      user.id === userId 
-        ? { ...user, status: user.status === 'active' ? 'inactive' : 'active' }
-        : user
-    ));
+    setUsers(
+      users.map((user) =>
+        user.id === userId
+          ? {
+              ...user,
+              status: user.status === 'active' ? 'inactive' : 'active',
+            }
+          : user
+      )
+    );
   };
 
   const StatCard = ({ title, value, icon, color }: any) => (
@@ -84,9 +88,7 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-sm text-gray-600">{title}</p>
           <p className="text-2xl font-bold text-gray-900">{value}</p>
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
-          {icon}
-        </div>
+        <div className={`p-3 rounded-full ${color}`}>{icon}</div>
       </div>
     </div>
   );
@@ -97,7 +99,10 @@ export const AdminDashboard: React.FC = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage users, monitor system performance, and oversee platform activities</p>
+          <p className="text-gray-600">
+            Manage users, monitor system performance, and oversee platform
+            activities
+          </p>
         </div>
 
         {/* Stats Grid */}
@@ -133,7 +138,9 @@ export const AdminDashboard: React.FC = () => {
           {/* User Management */}
           <div className="lg:col-span-2 bg-white rounded-lg shadow-md">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">User Management</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                User Management
+              </h2>
             </div>
             <div className="p-6">
               <div className="overflow-x-auto">
@@ -153,25 +160,31 @@ export const AdminDashboard: React.FC = () => {
                         <td className="py-3">
                           <div>
                             <p className="font-medium">{user.name}</p>
-                            <p className="text-sm text-gray-500">{user.email}</p>
+                            <p className="text-sm text-gray-500">
+                              {user.email}
+                            </p>
                           </div>
                         </td>
                         <td className="py-3">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            user.role === 'teacher' 
-                              ? 'bg-purple-100 text-purple-800' 
-                              : 'bg-blue-100 text-blue-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              user.role === 'teacher'
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-blue-100 text-blue-800'
+                            }`}
+                          >
                             {user.role}
                           </span>
                         </td>
                         <td className="py-3 text-sm">{user.department}</td>
                         <td className="py-3">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            user.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
+                          <span
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              user.status === 'active'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-red-100 text-red-800'
+                            }`}
+                          >
                             {user.status}
                           </span>
                         </td>
@@ -179,12 +192,16 @@ export const AdminDashboard: React.FC = () => {
                           <button
                             onClick={() => handleUserStatusToggle(user.id)}
                             className={`p-1 rounded ${
-                              user.status === 'active' 
-                                ? 'text-red-600 hover:bg-red-50' 
+                              user.status === 'active'
+                                ? 'text-red-600 hover:bg-red-50'
                                 : 'text-green-600 hover:bg-green-50'
                             }`}
                           >
-                            {user.status === 'active' ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                            {user.status === 'active' ? (
+                              <UserX className="h-4 w-4" />
+                            ) : (
+                              <UserCheck className="h-4 w-4" />
+                            )}
                           </button>
                         </td>
                       </tr>
@@ -198,7 +215,9 @@ export const AdminDashboard: React.FC = () => {
           {/* Quick Actions */}
           <div className="bg-white rounded-lg shadow-md">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">Quick Actions</h2>
+              <h2 className="text-xl font-semibold text-gray-900">
+                Quick Actions
+              </h2>
             </div>
             <div className="p-6 space-y-4">
               <button className="w-full flex items-center p-3 text-left rounded-lg hover:bg-gray-50 border">
