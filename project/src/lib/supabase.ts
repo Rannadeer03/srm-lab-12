@@ -22,21 +22,27 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 export const testConnection = async (retries = 5, initialDelay = 1000) => {
   for (let i = 0; i < retries; i++) {
     try {
-      // First try a lightweight health check
-      const { error: healthError } = await supabase.from('profiles').select('count', { head: true });
-      if (!healthError) {
-        console.log('Supabase connection successful');
-        return true;
-      }
+      // Try a simple query to test the connection
+      const { data, error } = await supabase
+        .from('tests')
+        .select('count', { count: 'exact', head: true });
 
-      // If health check fails, try a full connection test
-      const { error } = await supabase.from('profiles').select('count').single();
       if (!error) {
         console.log('Supabase connection successful');
         return true;
       }
 
-      console.warn(`Connection attempt ${i + 1} failed:`, error.message);
+      // If the first query fails, try another table
+      const { error: secondError } = await supabase
+        .from('test_results')
+        .select('count', { count: 'exact', head: true });
+
+      if (!secondError) {
+        console.log('Supabase connection successful');
+        return true;
+      }
+
+      console.warn(`Connection attempt ${i + 1} failed:`, error?.message || secondError?.message);
     } catch (err) {
       console.warn(`Connection attempt ${i + 1} failed:`, err);
     }
@@ -44,6 +50,7 @@ export const testConnection = async (retries = 5, initialDelay = 1000) => {
     if (i < retries - 1) {
       // Exponential backoff: delay increases with each retry
       const delay = initialDelay * Math.pow(2, i);
+      console.log(`Retrying in ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }

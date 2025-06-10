@@ -15,6 +15,8 @@ import {
   Book,
   X
 } from 'lucide-react';
+import { TestCompletionStatus } from '../components/TestCompletionStatus';
+import { useAuthStore } from '../store/authStore';
 
 interface Test {
   id: string;
@@ -35,11 +37,13 @@ interface Subject {
 export const NewStudentDashboard: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuthStore();
   const [availableTests, setAvailableTests] = useState<Test[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTestsModal, setShowTestsModal] = useState(false);
+  const [completedTestIds, setCompletedTestIds] = useState<string[]>([]);
 
   useEffect(() => {
     // Check if we should show tests modal from navigation
@@ -51,18 +55,60 @@ export const NewStudentDashboard: React.FC = () => {
   }, [location.state, navigate, location.pathname]);
 
   useEffect(() => {
+    if (user) {
+      fetchAvailableTests();
+      fetchCompletedTests();
+    }
+  }, [user]);
+
+  const fetchCompletedTests = async () => {
+    try {
+      const { data: results, error } = await supabase
+        .from('test_results')
+        .select('test_id')
+        .eq('student_id', user?.id)
+        .eq('status', 'completed');
+
+      if (error) throw error;
+
+      const completedIds = results?.map(result => result.test_id) || [];
+      setCompletedTestIds(completedIds);
+    } catch (error) {
+      console.error('Error fetching completed tests:', error);
+    }
+  };
+
+  const fetchAvailableTests = async () => {
+    try {
+      const { data: tests, error } = await supabase
+        .from('tests')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      // Filter out completed tests
+      const filteredTests = tests?.filter(test => !completedTestIds.includes(test.id)) || [];
+      setAvailableTests(filteredTests);
+    } catch (error) {
+      console.error('Error fetching available tests:', error);
+    }
+  };
+
+  // Update fetchAvailableTests when completedTestIds changes
+  useEffect(() => {
+    if (user) {
+      fetchAvailableTests();
+    }
+  }, [completedTestIds]);
+
+  useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
         
-        // Fetch tests from Supabase
-        const { data: testsData, error: testsError } = await supabase
-          .from('tests')
-          .select('*');
-
-        if (testsError) throw testsError;
-
         // Fetch subjects from Supabase
         const { data: subjectsData, error: subjectsError } = await supabase
           .from('subjects')
@@ -70,7 +116,6 @@ export const NewStudentDashboard: React.FC = () => {
 
         if (subjectsError) throw subjectsError;
 
-        setAvailableTests(testsData || []);
         setSubjects(subjectsData || []);
       } catch (error: any) {
         console.error('Error fetching data:', error);
@@ -89,7 +134,7 @@ export const NewStudentDashboard: React.FC = () => {
   };
 
   const handleStartTest = (testId: string) => {
-    navigate(`/test/${testId}`);
+    navigate(`/take-test/${testId}`);
   };
 
   const handleMenuClick = (id: string) => {
@@ -137,12 +182,13 @@ export const NewStudentDashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Student Dashboard</h1>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Menu Items */}
+        {/* Main Menu Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+          {/* Tests Menu Item */}
           <div 
             onClick={() => handleMenuClick('tests')}
             className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
@@ -156,6 +202,7 @@ export const NewStudentDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Study Materials Menu Item */}
           <div 
             onClick={() => handleMenuClick('study-materials')}
             className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
@@ -169,6 +216,7 @@ export const NewStudentDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Assignments Menu Item */}
           <div 
             onClick={() => handleMenuClick('assignments')}
             className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-md transition-shadow"
@@ -183,10 +231,15 @@ export const NewStudentDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Test Completion Status Section */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <TestCompletionStatus />
+        </div>
+
         {/* Tests Modal */}
         {showTestsModal && (
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg max-w-2xl w-full mx-4">
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-900">Available Tests</h2>

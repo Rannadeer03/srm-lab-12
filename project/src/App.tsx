@@ -13,12 +13,14 @@ import { CreateProfile } from './pages/CreateProfile';
 import TeacherAssignmentUpload from "./components/TeacherAssignmentUpload";
 import TeacherCourseUpload from "./components/TeacherCourseUpload";
 import StudentAssignmentView from "./components/StudentAssignmentView";
-import CreateTest from './pages/CreateTest';
+import CreateTestPage from './pages/CreateTestPage';
 import JeeTestInterface from './pages/JeeTestInterface';
 import { Register } from './pages/Register';
 import { AuthCallback } from './pages/AuthCallback';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { Profile } from './pages/Profile';
+import TestManagement from './pages/TestManagement';
+import TakeTestPage from './pages/TakeTestPage';
 
 // Simple loading screen component
 const LoadingScreen = () => (
@@ -54,8 +56,10 @@ const App: React.FC = () => {
             <Route path="/teacher/assignments" element={<TeacherAssignmentUpload />} />
             <Route path="/teacher/course-materials" element={<TeacherCourseUpload />} />
             <Route path="/student/assignments" element={<StudentAssignmentView />} />
-            <Route path="/teacher/create-test" element={<CreateTest />} />
+            <Route path="/create-test" element={<CreateTestPage />} />
+            <Route path="/teacher/test-management" element={<TestManagement />} />
             <Route path="/tests/:testId" element={<JeeTestInterface />} />
+            <Route path="/take-test/:testId" element={<TakeTestPage />} />
             <Route path="/register" element={<Register />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/profile" element={<Profile />} />

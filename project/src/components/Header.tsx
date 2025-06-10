@@ -91,21 +91,6 @@ export const Header: React.FC = () => {
         icon: <LayoutDashboard className="h-5 w-5" />, 
         text: 'Dashboard',
         active: location.pathname === '/student-dashboard'
-      },
-      { 
-        to: '/student-tests',
-        icon: <ClipboardList className="h-5 w-5" />, 
-        text: 'Tests',
-        active: location.pathname === '/student-tests',
-        onClick: () => {
-          navigate('/student-tests');
-        }
-      },
-      { 
-        to: '/results', 
-        icon: <BarChart2 className="h-5 w-5" />, 
-        text: 'Results',
-        active: location.pathname === '/results'
       }
     ];
   };

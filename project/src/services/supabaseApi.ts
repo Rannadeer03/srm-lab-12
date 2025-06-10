@@ -1,4 +1,3 @@
-
 import { supabase } from '../lib/supabase';
 
 export interface Question {
@@ -27,12 +26,12 @@ export interface Test {
   
   // Test scheduling
   is_scheduled?: boolean;
-  scheduled_date?: string;
-  scheduled_time?: string;
-  time_limit?: number;
+  scheduled_date?: string | null;
+  scheduled_time?: string | null;
+  time_limit?: number | null;
   allow_late_submissions?: boolean;
-  access_window_start?: string;
-  access_window_end?: string;
+  access_window_start?: string | null;
+  access_window_end?: string | null;
   
   // Difficulty distribution
   easy_count?: number;
