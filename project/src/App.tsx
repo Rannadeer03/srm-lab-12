@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 
 import { Header } from "./components/Header";
 import { Footer } from "./components/Footer";
@@ -68,6 +69,7 @@ const App: React.FC = () => {
           </Routes>
         </main>
         <Footer />
+        <Analytics />
       </div>
     </BrowserRouter>
   );
