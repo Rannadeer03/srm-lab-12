@@ -13,19 +13,20 @@ export const Login: React.FC = () => {
   });
   const [errorMessage, setError] = useState<string | null>(null);
 
+  console.log(profile);
   // Add effect to handle navigation when profile changes
   useEffect(() => {
     if (profile) {
       console.log('Profile detected, navigating to dashboard...', profile.role);
       switch (profile.role) {
         case 'student':
-          navigate('/student-dashboard');
+          navigate('/student/dashboard');
           break;
         case 'teacher':
-          navigate('/teacher-dashboard');
+          navigate('/teacher/dashboard');
           break;
         case 'admin':
-          navigate('/admin-dashboard');
+          navigate('/admin/dashboard');
           break;
         default:
           navigate('/');

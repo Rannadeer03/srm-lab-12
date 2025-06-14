@@ -223,8 +223,10 @@ export const TeacherDashboard: React.FC = () => {
     fetchData();
   }, [user]);
 
+  console.log(tests);
+
   const filteredTests = tests.filter((test: any) => {
-    const matchesSearch = test.name
+    const matchesSearch = test?.title
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
     const matchesStatus =
@@ -479,11 +481,10 @@ export const TeacherDashboard: React.FC = () => {
                   <tr key={test.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {test.name}
+                        {test.title}
                       </div>
                       <div className="text-sm text-gray-500">
-                        Created{' '}
-                        {new Date(test.dateCreated).toLocaleDateString()}
+                        Created {new Date(test.created_at).toLocaleDateString()}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -493,7 +494,7 @@ export const TeacherDashboard: React.FC = () => {
                       {test.duration} minutes
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <TestStatusBadge status={test.status} />
+                      {/* <TestStatusBadge status={test.status} /> */}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
